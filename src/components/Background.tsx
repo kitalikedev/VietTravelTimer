@@ -54,12 +54,14 @@ export const Background: React.FC<BackgroundProps> = ({
     const videoSrc = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}povtrain.mp4`;
 
     return (
-      <div className="fixed inset-0 pointer-events-none overflow-hidden select-none z-0 bg-[#000000]">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden select-none z-0 bg-[#09090b]">
         <video
           ref={videoRef}
           src={videoSrc}
-          loop
+          preload="metadata"
           playsInline
+          muted
+          loop
           onTimeUpdate={(e) => {
             const el = e.currentTarget;
             if (!el.duration || isNaN(el.duration)) return;
