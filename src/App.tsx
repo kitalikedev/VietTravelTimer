@@ -493,10 +493,8 @@ export const App: React.FC = () => {
       {/* VIEW: FOCUS HUB (Pomodoro Timer Ring, Tasks, Ambient Noise)               */}
       {/* ========================================================================= */}
       <div
-        className={`h-full w-full flex flex-col justify-between transition-opacity duration-300 relative z-20 pointer-events-auto pb-16 ${
-          appView === 'focus'
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 pointer-events-none absolute inset-0'
+        className={`relative z-20 flex flex-col min-h-screen justify-between transition-opacity duration-300 ease-out pb-16 ${
+          appView === 'focus' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none absolute inset-0'
         }`}
       >
         {/* Top Navbar: Clean Brand and Track Title & Backdrop Trigger */}
@@ -784,19 +782,25 @@ export const App: React.FC = () => {
         setTasks={setTasks}
       />
 
-      {/* Vietnam Railway Focus Journey (Flight-Inspired Flow) */}
-      <TrainBookingFlow
-        isOpen={appView === 'train_booking'}
-        onClose={() => setAppView('focus')}
-        departureId={trainJourney.departureId}
-        arrivalId={trainJourney.arrivalId}
-        onSelectRoute={(depId, arrId) => {
-          const next = { departureId: depId, arrivalId: arrId };
-          setTrainJourney(next);
-          saveTrainJourney(next);
-        }}
-        onStartJourney={handleStartTrainJourney}
-      />
+      {/* Persistent Full-Screen Train Booking Overlay */}
+      <div
+        className={`fixed inset-0 z-40 transition-opacity duration-300 ease-out bg-black ${
+          appView === 'train_booking' ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none invisible'
+        }`}
+      >
+        <TrainBookingFlow
+          isOpen={appView === 'train_booking'}
+          onClose={() => setAppView('focus')}
+          departureId={trainJourney.departureId}
+          arrivalId={trainJourney.arrivalId}
+          onSelectRoute={(depId, arrId) => {
+            const next = { departureId: depId, arrivalId: arrId };
+            setTrainJourney(next);
+            saveTrainJourney(next);
+          }}
+          onStartJourney={handleStartTrainJourney}
+        />
+      </div>
     </div>
   );
 };

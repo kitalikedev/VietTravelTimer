@@ -8,6 +8,7 @@ import {
 } from '../data/trainStations';
 
 interface RouteStepViewProps {
+  isOpen?: boolean;
   departureId: string;
   arrivalId: string;
   durationMinutes: number;
@@ -19,6 +20,7 @@ interface RouteStepViewProps {
 }
 
 export const RouteStepView: React.FC<RouteStepViewProps> = ({
+  isOpen = true,
   departureId,
   arrivalId,
   durationMinutes,
@@ -213,6 +215,18 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
       }
     };
   }, []);
+
+  // Invalidate Leaflet size immediately when container becomes visible
+  useEffect(() => {
+    if (isOpen && mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        try {
+          mapInstanceRef.current?.invalidateSize();
+        } catch {}
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
 
   // Update Markers and Route Polylines (Apple Maps Style Vector Contrast)
   const renderMapContent = useCallback(() => {

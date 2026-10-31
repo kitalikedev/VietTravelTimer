@@ -36,6 +36,19 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+/* Zero-flash Leaflet Map Theme */
+.leaflet-container {
+  background-color: #09090b !important;
+  outline: none !important;
+}
+.leaflet-tile {
+  /* Smooth tile fade-in to prevent sharp square popping */
+  transition: opacity 0.2s ease-in-out;
+}
+.leaflet-tile-container {
+  background-color: #09090b !important;
+}
+
 /* Apple styled custom range input */
 input[type="range"] {
   -webkit-appearance: none;

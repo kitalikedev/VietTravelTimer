@@ -62,6 +62,7 @@ export const Background: React.FC<BackgroundProps> = ({
           playsInline
           muted
           loop
+          className="w-full h-full object-cover select-none pointer-events-none transform-gpu will-change-transform translate-z-0"
           onTimeUpdate={(e) => {
             const el = e.currentTarget;
             if (!el.duration || isNaN(el.duration)) return;
@@ -77,7 +78,6 @@ export const Background: React.FC<BackgroundProps> = ({
             console.warn('[Background] Failed to load train video, falling back.');
             setVideoError(true);
           }}
-          className="w-full h-full object-cover select-none pointer-events-none transform-gpu"
         >
           <source src={videoSrc} type="video/mp4" />
         </video>

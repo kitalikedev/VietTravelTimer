@@ -152,153 +152,147 @@ export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
     onClose();
   }, [coachNumber, durationMinutes, onClose, onStartJourney, selectedBerth, selectedIntent]);
 
-  // 6. Zero-slop AnimatePresence wrapper: NO early return before hooks!
+  // 6. Zero-slop structure: Keep container persistently rendered without destroying on isOpen toggle
   return (
-    <AnimatePresence initial={false}>
-      {isOpen && (
-        <motion.div
-          key="train-booking-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-50 bg-[#000000] flex flex-col text-white select-none overflow-hidden font-apple"
-        >
-          {/* Top Flight-Style Navigation HUD */}
-          <header className="relative z-30 w-full px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md">
-            {/* Left: Brand Label */}
-            <div className="flex items-center gap-3">
-              <div className="text-xs font-sans tracking-wide text-zinc-300 font-medium">
-                Đường sắt Việt Nam · Thống Nhất SE3
-              </div>
-            </div>
-
-            {/* Center: Large Typography Codes */}
-            <div className="hidden sm:flex items-center gap-2 font-medium text-sm">
-              <span className="text-white font-mono font-bold">{journeyInfo.depStation.code}</span>
-              <span className="text-zinc-400 font-sans text-xs">{journeyInfo.depStation.name}</span>
-              <span className="text-zinc-600 font-sans">→</span>
-              <span className="text-amber-400 font-mono font-bold">{journeyInfo.arrStation.code}</span>
-              <span className="text-amber-300/90 font-sans text-xs">{journeyInfo.arrStation.name}</span>
-              <span className="text-xs text-zinc-500 font-sans ml-1.5">
-                · {journeyInfo.totalDistance} km
-              </span>
-            </div>
-
-            {/* Right: Exit / Close Button (Apple Design Standard) */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/30 text-zinc-300 hover:text-white transition bg-white/[0.04] hover:bg-white/[0.08]"
-              title="Thoát chế độ đặt vé (Esc)"
-            >
-              <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono border border-white/15 text-zinc-300 leading-none">
-                esc
-              </kbd>
-              <span className="text-xs font-sans font-medium">Đóng</span>
-              <X className="w-3.5 h-3.5 text-zinc-400" />
-            </button>
-          </header>
-
-          {/* Dynamic Step View Switcher with Framer Motion */}
-          <div className="relative flex-1 w-full h-full flex flex-col overflow-hidden">
-            <AnimatePresence mode="wait">
-              {step === 'ROUTE' && (
-                <motion.div
-                  key="step-route"
-                  variants={stepMotionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={stepMotionTransition}
-                  className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
-                >
-                  <RouteStepView
-                    departureId={selectedDepId}
-                    arrivalId={selectedArrId}
-                    durationMinutes={durationMinutes}
-                    onSelectDuration={setDurationMinutes}
-                    onSelectStation={handleSelectStation}
-                    onSelectRoute={(depId, arrId) => {
-                      setSelectedDepId(depId);
-                      setSelectedArrId(arrId);
-                      onSelectRoute(depId, arrId);
-                    }}
-                    onSwapStations={handleSwapStations}
-                    onConfirm={() => setStep('CABIN')}
-                  />
-                </motion.div>
-              )}
-
-              {step === 'CABIN' && (
-                <motion.div
-                  key="step-cabin"
-                  variants={stepMotionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={stepMotionTransition}
-                  className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
-                >
-                  <CabinStepView
-                    selectedBerthId={selectedBerthId}
-                    onSelectBerth={setSelectedBerthId}
-                    selectedIntent={selectedIntent}
-                    onSelectIntent={setSelectedIntent}
-                    coachNumber={coachNumber}
-                    onBack={() => setStep('ROUTE')}
-                    onConfirm={() => setStep('TICKET')}
-                  />
-                </motion.div>
-              )}
-
-              {step === 'TICKET' && (
-                <motion.div
-                  key="step-ticket"
-                  variants={stepMotionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={stepMotionTransition}
-                  className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
-                >
-                  <TicketStepView
-                    journeyInfo={journeyInfo}
-                    coachNumber={coachNumber}
-                    selectedBerth={selectedBerth}
-                    selectedIntent={selectedIntent}
-                    durationMinutes={durationMinutes}
-                    onBack={() => setStep('CABIN')}
-                    onConfirm={() => setStep('DEPART')}
-                  />
-                </motion.div>
-              )}
-
-              {step === 'DEPART' && (
-                <motion.div
-                  key="step-depart"
-                  variants={stepMotionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={stepMotionTransition}
-                  className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
-                >
-                  <DepartGateView
-                    journeyInfo={journeyInfo}
-                    coachNumber={coachNumber}
-                    selectedBerth={selectedBerth}
-                    selectedIntent={selectedIntent}
-                    durationMinutes={durationMinutes}
-                    onStartJourney={handleStartDepart}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+    <div
+      className={`fixed inset-0 z-50 bg-[#000000] flex flex-col text-white select-none overflow-hidden font-apple transition-opacity duration-300 ease-out ${
+        isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none invisible'
+      }`}
+    >
+      {/* Top Flight-Style Navigation HUD */}
+      <header className="relative z-30 w-full px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md">
+        {/* Left: Brand Label */}
+        <div className="flex items-center gap-3">
+          <div className="text-xs font-sans tracking-wide text-zinc-300 font-medium">
+            Đường sắt Việt Nam · Thống Nhất SE3
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        </div>
+
+        {/* Center: Large Typography Codes */}
+        <div className="hidden sm:flex items-center gap-2 font-medium text-sm">
+          <span className="text-white font-mono font-bold">{journeyInfo.depStation.code}</span>
+          <span className="text-zinc-400 font-sans text-xs">{journeyInfo.depStation.name}</span>
+          <span className="text-zinc-600 font-sans">→</span>
+          <span className="text-amber-400 font-mono font-bold">{journeyInfo.arrStation.code}</span>
+          <span className="text-amber-300/90 font-sans text-xs">{journeyInfo.arrStation.name}</span>
+          <span className="text-xs text-zinc-500 font-sans ml-1.5">
+            · {journeyInfo.totalDistance} km
+          </span>
+        </div>
+
+        {/* Right: Exit / Close Button (Apple Design Standard) */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 hover:border-white/30 text-zinc-300 hover:text-white transition bg-white/[0.04] hover:bg-white/[0.08]"
+          title="Thoát chế độ đặt vé (Esc)"
+        >
+          <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono border border-white/15 text-zinc-300 leading-none">
+            esc
+          </kbd>
+          <span className="text-xs font-sans font-medium">Đóng</span>
+          <X className="w-3.5 h-3.5 text-zinc-400" />
+        </button>
+      </header>
+
+      {/* Dynamic Step View Switcher with Framer Motion */}
+      <div className="relative flex-1 w-full h-full flex flex-col overflow-hidden">
+        <AnimatePresence mode="wait">
+          {step === 'ROUTE' && (
+            <motion.div
+              key="step-route"
+              variants={stepMotionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={stepMotionTransition}
+              className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
+            >
+              <RouteStepView
+                isOpen={isOpen && step === 'ROUTE'}
+                departureId={selectedDepId}
+                arrivalId={selectedArrId}
+                durationMinutes={durationMinutes}
+                onSelectDuration={setDurationMinutes}
+                onSelectStation={handleSelectStation}
+                onSelectRoute={(depId, arrId) => {
+                  setSelectedDepId(depId);
+                  setSelectedArrId(arrId);
+                  onSelectRoute(depId, arrId);
+                }}
+                onSwapStations={handleSwapStations}
+                onConfirm={() => setStep('CABIN')}
+              />
+            </motion.div>
+          )}
+
+          {step === 'CABIN' && (
+            <motion.div
+              key="step-cabin"
+              variants={stepMotionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={stepMotionTransition}
+              className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
+            >
+              <CabinStepView
+                selectedBerthId={selectedBerthId}
+                onSelectBerth={setSelectedBerthId}
+                selectedIntent={selectedIntent}
+                onSelectIntent={setSelectedIntent}
+                coachNumber={coachNumber}
+                onBack={() => setStep('ROUTE')}
+                onConfirm={() => setStep('TICKET')}
+              />
+            </motion.div>
+          )}
+
+          {step === 'TICKET' && (
+            <motion.div
+              key="step-ticket"
+              variants={stepMotionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={stepMotionTransition}
+              className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
+            >
+              <TicketStepView
+                journeyInfo={journeyInfo}
+                coachNumber={coachNumber}
+                selectedBerth={selectedBerth}
+                selectedIntent={selectedIntent}
+                durationMinutes={durationMinutes}
+                onBack={() => setStep('CABIN')}
+                onConfirm={() => setStep('DEPART')}
+              />
+            </motion.div>
+          )}
+
+          {step === 'DEPART' && (
+            <motion.div
+              key="step-depart"
+              variants={stepMotionVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={stepMotionTransition}
+              className="relative flex-1 w-full h-full flex flex-col overflow-hidden"
+            >
+              <DepartGateView
+                journeyInfo={journeyInfo}
+                coachNumber={coachNumber}
+                selectedBerth={selectedBerth}
+                selectedIntent={selectedIntent}
+                durationMinutes={durationMinutes}
+                onStartJourney={handleStartDepart}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
