@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" class="h-full bg-black text-white antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2244%22 fill=%22none%22 stroke=%22white%22 stroke-width=%228%22/><circle cx=%2250%22 cy=%2250%22 r=%2216%22 fill=%22white%22/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Vietnam Focus Hub — Deep Focus Workspace with Reunification Railway" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Leaflet GIS Map Assets (Reliable Cloudflare CDN with Defer - Never blocks HTML parsing) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <title>Vietnam Focus Hub · Thống Nhất SE3</title>
+    <script>
+      window.addEventListener('error', function(e) {
+        console.error('WINDOW ERROR:', e);
+        var div = document.getElementById('global-error-banner');
+        if (!div) {
+          div = document.createElement('div');
+          div.id = 'global-error-banner';
+          div.style = 'position:fixed;top:0;left:0;right:0;background:#991b1b;color:#fff;padding:20px;z-index:9999999;font-family:monospace;font-size:13px;white-space:pre-wrap;box-shadow:0 10px 40px rgba(0,0,0,0.9);border-bottom:2px solid #ef4444;';
+          document.body ? document.body.appendChild(div) : document.documentElement.appendChild(div);
+        }
+        div.innerHTML = '<strong>[WINDOW ERROR]:</strong> ' + (e.message || 'Script error') + '<br/><br/>' +
+          '<strong>Source:</strong> ' + (e.filename || 'unknown') + ':' + (e.lineno || '0') + '<br/><br/>' +
+          '<strong>Stack:</strong><br/>' + (e.error && e.error.stack ? e.error.stack : 'No stack trace');
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('UNHANDLED REJECTION:', e);
+        var div = document.getElementById('global-error-banner');
+        if (!div) {
+          div = document.createElement('div');
+          div.id = 'global-error-banner';
+          div.style = 'position:fixed;top:0;left:0;right:0;background:#c2410c;color:#fff;padding:20px;z-index:9999999;font-family:monospace;font-size:13px;white-space:pre-wrap;box-shadow:0 10px 40px rgba(0,0,0,0.9);border-bottom:2px solid #f97316;';
+          document.body ? document.body.appendChild(div) : document.documentElement.appendChild(div);
+        }
+        var msg = e.reason ? (e.reason.stack || e.reason.message || String(e.reason)) : 'Unknown rejection';
+        div.innerHTML = '<strong>[UNHANDLED PROMISE REJECTION]:</strong><br/><br/>' + msg;
+      });
+    </script>
+  </head>
+  <body class="h-full bg-black text-white font-apple">
+    <div id="root" class="h-full w-full">
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#aaa;font-family:sans-serif;font-size:14px;letter-spacing:0.1em;text-transform:uppercase;">
+        Đang khởi động không gian tập trung...
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body, button, input, select {
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    @apply antialiased select-none;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+/* Hide scrollbar for all browsers */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Apple styled custom range input */
+input[type="range"] {
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+/* Ambient organic drifting background animations */
+@keyframes ambient-float-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1.1);
+  }
+  50% {
+    transform: translate(-30px, 20px) scale(1.22);
+  }
+}
+
+@keyframes ambient-float-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1.15);
+  }
+  50% {
+    transform: translate(35px, -25px) scale(1.28);
+  }
+}
+
+.animate-ambient-1 {
+  animation: ambient-float-1 22s ease-in-out infinite;
+}
+
+.animate-ambient-2 {
+  animation: ambient-float-2 28s ease-in-out infinite;
+}
+
+/* Apple Music Lyrics Progressive Depth-of-Field Blur */
+.lyric-blur-1 {
+  filter: blur(1.8px);
+  -webkit-filter: blur(1.8px);
+}
+
+.lyric-blur-2 {
+  filter: blur(2.8px);
+  -webkit-filter: blur(2.8px);
+}
+
+.lyric-blur-3 {
+  filter: blur(3.8px);
+  -webkit-filter: blur(3.8px);
+}
+
+.group:hover .lyric-blur-1,
+.group:hover .lyric-blur-2,
+.group:hover .lyric-blur-3 {
+  filter: blur(0px);
+  -webkit-filter: blur(0px);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s ease-in-out;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  border: none;
+  transition: transform 0.15s ease-in-out;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Animated Leaflet train route line */
+@keyframes train-dash-anim {
+  from {
+    stroke-dashoffset: 28;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.train-route-dash {
+  animation: train-dash-anim 1.2s linear infinite;
+}
+
+/* Ensure Leaflet dark styling */
+.leaflet-container {
+  background: #000000 !important;
+  font-family: inherit;
+}
+.leaflet-bar {
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+.leaflet-bar a {
+  background-color: rgba(18, 18, 20, 0.9) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.leaflet-bar a:hover {
+  background-color: rgba(35, 35, 40, 0.95) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 9px !important;
+}
+.leaflet-control-attribution a {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Apple Vignette Gradient for Focus Mode */
+.bg-radial-vignette {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(9, 9, 11, 0.82) 85%, #09090b 100%);
+}
+
