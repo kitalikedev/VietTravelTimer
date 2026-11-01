@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { BackdropMode } from './WallpaperManager';
+import React, { useState } from 'react';
+import { BackdropMode, PIXEL_BACKGROUNDS, getBackgroundAssetUrl } from '../data/backgrounds';
 
 export type BackgroundMode = BackdropMode;
 
@@ -14,89 +14,55 @@ interface BackgroundProps {
 
 export const Background: React.FC<BackgroundProps> = ({
   mode,
-  isRunning,
-  isBreak = false,
   customWallpaperUrl,
   songThumbnailUrl,
 }) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [videoError, setVideoError] = useState<boolean>(false);
-  const [isLoopFading, setIsLoopFading] = useState<boolean>(false);
+  const [imgErrorMap, setImgErrorMap] = useState<Record<string, boolean>>({});
 
-  // Playback Synchronization for POV Train Video:
-  // When timer is RUNNING & NOT on break -> videoRef.current?.play()
-  // When timer is PAUSED or on BREAK -> videoRef.current?.pause()
-  useEffect(() => {
-    if (mode !== 'POV_VIDEO' || videoError) return;
+  // 1. PIXEL ART GIF BACKGROUND (PIXEL_1, PIXEL_2, PIXEL_3, POV_VIDEO fallback)
+  const pixelConfig =
+    PIXEL_BACKGROUNDS.find((p) => p.id === mode) ||
+    (mode === 'POV_VIDEO' ? PIXEL_BACKGROUNDS[0] : null);
 
-    const videoEl = videoRef.current;
-    if (!videoEl) return;
-
-    if (isRunning && !isBreak) {
-      try {
-        videoEl.volume = 0.35;
-      } catch {}
-      videoEl.play().catch((err) => {
-        console.warn('[Background] Video play error:', err);
-      });
-    } else {
-      videoEl.pause();
-    }
-  }, [isRunning, isBreak, mode, videoError]);
-
-  // 1. POV TRAIN VIDEO MODE
-  if (mode === 'POV_VIDEO') {
-    if (videoError) {
-      return <div className="fixed inset-0 pointer-events-none select-none z-0 bg-[#09090b]" />;
-    }
-
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    const videoSrc = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}povtrain.mp4`;
+  if (pixelConfig) {
+    const hasError = imgErrorMap[pixelConfig.id];
+    const imgSrc = hasError
+      ? pixelConfig.fallbackUrl
+      : getBackgroundAssetUrl(pixelConfig.localPath);
 
     return (
       <div className="fixed inset-0 pointer-events-none overflow-hidden select-none z-0 bg-[#09090b]">
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          preload="metadata"
-          playsInline
-          muted
-          loop
-          className="w-full h-full object-cover select-none pointer-events-none transform-gpu will-change-transform translate-z-0"
-          onTimeUpdate={(e) => {
-            const el = e.currentTarget;
-            if (!el.duration || isNaN(el.duration)) return;
-            // Smoothly fade out to black 1.2s before loop end
-            if (el.currentTime >= el.duration - 1.2) {
-              if (!isLoopFading) setIsLoopFading(true);
-            } else if (el.currentTime <= 1.0) {
-              // Smoothly fade back in
-              if (isLoopFading) setIsLoopFading(false);
+        <img
+          key={pixelConfig.id}
+          src={imgSrc}
+          alt={pixelConfig.label}
+          onError={() => {
+            if (!hasError) {
+              setImgErrorMap((prev) => ({ ...prev, [pixelConfig.id]: true }));
             }
           }}
-          onError={() => {
-            console.warn('[Background] Failed to load train video, falling back.');
-            setVideoError(true);
-          }}
-        >
-          <source src={videoSrc} type="video/mp4" />
-        </video>
-
-        {/* Minimal Hairline Contrast Tint */}
-        <div className="absolute inset-0 bg-black/35 pointer-events-none" />
-        <div className="absolute inset-0 bg-radial-vignette opacity-50 pointer-events-none" />
-
-        {/* Seamless Video Loop Blackout Crossfade Overlay */}
-        <div
-          className={`absolute inset-0 bg-black pointer-events-none transition-opacity duration-1000 ${
-            isLoopFading ? 'opacity-100' : 'opacity-0'
-          }`}
+          className="w-full h-full object-cover select-none pointer-events-none transform-gpu transition-opacity duration-700"
         />
+
+        {/* Subtle customizable dark vignette overlay (bg-black/25) for crisp typography */}
+        <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+        <div className="absolute inset-0 bg-radial-vignette opacity-50 pointer-events-none" />
       </div>
     );
   }
 
-  // 2. CUSTOM USER WALLPAPER MODE (IndexedDB stored Blob URL)
+  // 2. DARK CANVAS (Tối giản)
+  if (mode === 'DARK_CANVAS') {
+    return (
+      <div className="fixed inset-0 pointer-events-none overflow-hidden select-none z-0 bg-[#09090b]">
+        {/* Soft elegant atmospheric gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#121215] via-[#09090b] to-[#050507]" />
+        <div className="absolute inset-0 bg-radial-vignette opacity-60 pointer-events-none" />
+      </div>
+    );
+  }
+
+  // 3. CUSTOM USER WALLPAPER (Upload or Link)
   if (mode === 'CUSTOM_WALLPAPER') {
     if (customWallpaperUrl) {
       return (
@@ -104,15 +70,14 @@ export const Background: React.FC<BackgroundProps> = ({
           <img
             src={customWallpaperUrl}
             alt="Custom Wallpaper"
-            className="fixed inset-0 w-full h-full object-cover -z-10 brightness-[0.65] contrast-[1.05] transition-opacity duration-700"
+            className="fixed inset-0 w-full h-full object-cover -z-10 brightness-[0.70] contrast-[1.05] transition-opacity duration-700"
           />
-          <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+          <div className="absolute inset-0 bg-black/35 pointer-events-none" />
           <div className="absolute inset-0 bg-radial-vignette opacity-70 pointer-events-none" />
         </div>
       );
     }
 
-    // Fallback if no custom wallpaper uploaded yet
     return (
       <div className="fixed inset-0 pointer-events-none overflow-hidden select-none z-0 bg-[#09090b]">
         <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vw] rounded-full bg-[#1e293b] opacity-30 filter blur-[120px] transform-gpu" />
@@ -122,22 +87,16 @@ export const Background: React.FC<BackgroundProps> = ({
     );
   }
 
-  // 3. CENTER ARTWORK MODE (macOS Apple Music Style living ambient blurred backdrop)
+  // 4. CENTER ARTWORK MODE (macOS Apple Music Style living ambient blurred backdrop)
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden select-none z-0 bg-[#09090b]">
       {/* Dynamic Ambient Fluid Light Orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Orb 1: Upper Left (Cobalt Sapphire) */}
         <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vw] max-w-[900px] max-h-[900px] rounded-full bg-[#1b3d82] opacity-35 filter blur-[120px] mix-blend-screen transform-gpu animate-ambient-1" />
-
-        {/* Orb 2: Center Right (Midnight Cyan Azure) */}
         <div className="absolute top-[20%] right-[-10%] w-[60vw] h-[60vw] max-w-[850px] max-h-[850px] rounded-full bg-[#102d64] opacity-35 filter blur-[120px] mix-blend-screen transform-gpu animate-ambient-2" />
-
-        {/* Orb 3: Bottom Left (Deep Slate Violet) */}
         <div className="absolute -bottom-[20%] left-[20%] w-[50vw] h-[50vw] max-w-[750px] max-h-[750px] rounded-full bg-[#182346] opacity-30 filter blur-[130px] mix-blend-screen transform-gpu" />
       </div>
 
-      {/* Direct Full-Screen Cover Artwork Spill */}
       {songThumbnailUrl && (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <img
@@ -148,7 +107,6 @@ export const Background: React.FC<BackgroundProps> = ({
         </div>
       )}
 
-      {/* Dark Vignette Overlay for crisp timer contrast */}
       <div className="absolute inset-0 bg-radial-vignette opacity-70 pointer-events-none" />
       <div className="absolute inset-0 bg-black/50 pointer-events-none" />
     </div>

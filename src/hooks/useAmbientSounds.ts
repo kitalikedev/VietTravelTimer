@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export type AmbientSoundId = 'rain' | 'campfire' | 'ocean' | 'brownNoise' | 'forest';
+export type AmbientSoundId = 'train' | 'rain' | 'cafe' | 'brownNoise' | 'campfire' | 'ocean' | 'forest';
 
 export interface AmbientSoundConfig {
   id: AmbientSoundId;
@@ -10,10 +10,12 @@ export interface AmbientSoundConfig {
 }
 
 export const AMBIENT_SOUNDS: AmbientSoundConfig[] = [
+  { id: 'train', label: 'Tiếng tàu chạy (Train)', iconName: 'Train', defaultVolume: 0 },
   { id: 'rain', label: 'Mưa rào (Rain)', iconName: 'CloudRain', defaultVolume: 0 },
+  { id: 'cafe', label: 'Quán cà phê (Cafe)', iconName: 'Coffee', defaultVolume: 0 },
+  { id: 'brownNoise', label: 'Deep Brown Noise', iconName: 'Activity', defaultVolume: 0 },
   { id: 'campfire', label: 'Lửa trại (Campfire)', iconName: 'Flame', defaultVolume: 0 },
   { id: 'ocean', label: 'Sóng biển (Ocean Waves)', iconName: 'Waves', defaultVolume: 0 },
-  { id: 'brownNoise', label: 'Deep Brown Noise', iconName: 'Activity', defaultVolume: 0 },
   { id: 'forest', label: 'Rừng đêm (Night Forest)', iconName: 'Trees', defaultVolume: 0 },
 ];
 
@@ -27,20 +29,24 @@ export function useAmbientSounds() {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
           return {
+            train: Number(parsed.train) || 0,
             rain: Number(parsed.rain) || 0,
+            cafe: Number(parsed.cafe) || 0,
+            brownNoise: Number(parsed.brownNoise) || 0,
             campfire: Number(parsed.campfire) || 0,
             ocean: Number(parsed.ocean) || 0,
-            brownNoise: Number(parsed.brownNoise) || 0,
             forest: Number(parsed.forest) || 0,
           };
         }
       }
     } catch {}
     return {
+      train: 0,
       rain: 0,
+      cafe: 0,
+      brownNoise: 0,
       campfire: 0,
       ocean: 0,
-      brownNoise: 0,
       forest: 0,
     };
   });
@@ -51,10 +57,12 @@ export function useAmbientSounds() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const channelGainsRef = useRef<Record<AmbientSoundId, GainNode | null>>({
+    train: null,
     rain: null,
+    cafe: null,
+    brownNoise: null,
     campfire: null,
     ocean: null,
-    brownNoise: null,
     forest: null,
   });
   const isInitializedRef = useRef<boolean>(false);
@@ -83,6 +91,65 @@ export function useAmbientSounds() {
     // Helper: Create White/Pink Noise Buffer
     const sampleRate = ctx.sampleRate;
     const bufferLength = sampleRate * 5; // 5-second seamless loop buffer
+
+    // 0. TRAIN RHYTHM SYNTHESIS (Mechanical cadence chug-chug)
+    const trainGain = ctx.createGain();
+    trainGain.gain.setValueAtTime((volumes.train / 100) * 0.85, ctx.currentTime);
+    trainGain.connect(master);
+    channelGainsRef.current.train = trainGain;
+
+    const trainBuffer = ctx.createBuffer(1, bufferLength, sampleRate);
+    const trainData = trainBuffer.getChannelData(0);
+    let trainLast = 0.0;
+    for (let i = 0; i < bufferLength; i++) {
+      const white = Math.random() * 2 - 1;
+      trainLast = (trainLast + 0.02 * white) / 1.02;
+      const t = i / sampleRate;
+      const pattern = (t * 1.8) % 1;
+      const beat1 = Math.exp(-Math.pow((pattern - 0.0) * 30, 2));
+      const beat2 = Math.exp(-Math.pow((pattern - 0.15) * 30, 2));
+      const beat3 = Math.exp(-Math.pow((pattern - 0.5) * 30, 2));
+      const beat4 = Math.exp(-Math.pow((pattern - 0.65) * 30, 2));
+      const railPulse = (beat1 + beat2 * 0.8 + beat3 * 0.9 + beat4 * 0.7) * 0.45;
+      trainData[i] = (trainLast * 2.2 + white * 0.08) * (0.6 + railPulse);
+    }
+    const trainSource = ctx.createBufferSource();
+    trainSource.buffer = trainBuffer;
+    trainSource.loop = true;
+    const trainFilter = ctx.createBiquadFilter();
+    trainFilter.type = 'lowpass';
+    trainFilter.frequency.setValueAtTime(320, ctx.currentTime);
+    trainSource.connect(trainFilter);
+    trainFilter.connect(trainGain);
+    trainSource.start();
+
+    // 0B. CAFE AMBIENCE SYNTHESIS (Warm room chatter + clinks)
+    const cafeGain = ctx.createGain();
+    cafeGain.gain.setValueAtTime((volumes.cafe / 100) * 0.75, ctx.currentTime);
+    cafeGain.connect(master);
+    channelGainsRef.current.cafe = cafeGain;
+
+    const cafeBuffer = ctx.createBuffer(1, bufferLength, sampleRate);
+    const cafeData = cafeBuffer.getChannelData(0);
+    let cafeLast = 0.0;
+    for (let i = 0; i < bufferLength; i++) {
+      const white = Math.random() * 2 - 1;
+      cafeLast = (cafeLast + 0.04 * white) / 1.04;
+      const t = i / sampleRate;
+      const clink1 = Math.sin(2 * Math.PI * 2200 * t) * (Math.random() < 0.0004 ? 0.35 : 0);
+      const clink2 = Math.sin(2 * Math.PI * 3400 * t) * (Math.random() < 0.0003 ? 0.25 : 0);
+      cafeData[i] = cafeLast * 1.8 + clink1 + clink2;
+    }
+    const cafeSource = ctx.createBufferSource();
+    cafeSource.buffer = cafeBuffer;
+    cafeSource.loop = true;
+    const cafeFilter = ctx.createBiquadFilter();
+    cafeFilter.type = 'bandpass';
+    cafeFilter.frequency.setValueAtTime(650, ctx.currentTime);
+    cafeFilter.Q.setValueAtTime(0.7, ctx.currentTime);
+    cafeSource.connect(cafeFilter);
+    cafeFilter.connect(cafeGain);
+    cafeSource.start();
 
     // 1. RAIN SYNTHESIS (Pink noise + Bandpass + Highpass)
     const rainGain = ctx.createGain();
@@ -271,10 +338,12 @@ export function useAmbientSounds() {
   // Stop all sounds
   const stopAll = useCallback(() => {
     setVolumes({
+      train: 0,
       rain: 0,
+      cafe: 0,
+      brownNoise: 0,
       campfire: 0,
       ocean: 0,
-      brownNoise: 0,
       forest: 0,
     });
     try {

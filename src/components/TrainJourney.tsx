@@ -235,25 +235,24 @@ export const TrainJourney: React.FC<TrainJourneyProps> = ({
 
   // 2. IDLE STATE: Clean Route Preview Pill
   return (
-    <div className="w-full max-w-md mx-auto mb-4 select-none font-sans">
-      <div className="flex items-center justify-between text-xs px-1">
+    <div className="w-full max-w-md mx-auto mb-3 sm:mb-4 select-none font-sans">
+      <div className="flex items-center justify-center sm:justify-between text-xs px-1 gap-2">
         <button
           type="button"
           onClick={onOpenBookingFlow}
-          className="flex items-center gap-1.5 font-medium text-white/80 hover:text-white transition group py-1 px-3 rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 shadow-sm"
+          className="flex items-center gap-1.5 font-medium text-white/90 hover:text-white transition group py-1.5 px-3 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 shadow-sm cursor-pointer max-w-full"
           title="Mở hành trình và đặt vé tàu"
         >
-          <Train className="w-3.5 h-3.5 text-white/60 group-hover:text-white transition-colors" />
-          <span className="font-semibold tracking-tight">{depStation.name}</span>
-          <span className="font-mono text-white/40 text-[11px]">({depStation.code})</span>
-          <span className="text-white/30 mx-0.5">➔</span>
-          <span className="font-semibold tracking-tight">{arrStation.name}</span>
-          <span className="font-mono text-white/40 text-[11px]">({arrStation.code})</span>
-          <Ticket className="w-3 h-3 text-white/30 group-hover:text-white ml-0.5 transition" />
+          <Train className="w-3.5 h-3.5 text-white/60 group-hover:text-white transition-colors shrink-0" />
+          <span className="font-semibold tracking-tight text-xs truncate">{depStation.name}</span>
+          <span className="text-white/40 mx-0.5 shrink-0">➔</span>
+          <span className="font-semibold tracking-tight text-xs truncate">{arrStation.name}</span>
+          <span className="text-white/50 text-[11px] shrink-0 font-mono">• {totalDistance} km</span>
+          <Ticket className="w-3 h-3 text-white/40 group-hover:text-white ml-0.5 transition shrink-0" />
         </button>
 
-        <span className="text-[11px] font-sans font-medium px-2.5 py-0.5 rounded-full bg-[#121214] text-white/50 border border-white/[0.08]">
-          Chờ khởi hành · {totalDistance} km
+        <span className="hidden sm:inline-block text-[11px] font-sans font-medium px-2.5 py-0.5 rounded-full bg-[#121214] text-white/50 border border-white/[0.08] whitespace-nowrap">
+          Chờ khởi hành
         </span>
       </div>
     </div>

@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 export type FocusMode = 'focus' | 'shortBreak' | 'longBreak';
 
-const MODE_DURATIONS: Record<FocusMode, number> = {
-  focus: 25 * 60, // 25 minutes
-  shortBreak: 5 * 60, // 5 minutes
-  longBreak: 15 * 60, // 15 minutes
+const DEFAULT_DURATIONS: Record<FocusMode, number> = {
+  focus: 25,
+  shortBreak: 5,
+  longBreak: 15,
 };
 
 /**
@@ -73,8 +73,23 @@ function triggerBrowserNotification(title: string, body: string) {
 
 export function useFocusTimer() {
   const [mode, setModeState] = useState<FocusMode>('focus');
-  const [customFocusDuration, setCustomFocusDuration] = useState<number>(MODE_DURATIONS.focus);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(MODE_DURATIONS.focus);
+  const [modeDurations, setModeDurations] = useState<{
+    focus: number;
+    shortBreak: number;
+    longBreak: number;
+  }>(() => {
+    try {
+      const saved = localStorage.getItem('viet_travel_mode_durations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.focus && parsed.shortBreak && parsed.longBreak) return parsed;
+      }
+    } catch {}
+    return DEFAULT_DURATIONS;
+  });
+
+  const [customFocusDuration, setCustomFocusDuration] = useState<number>(() => modeDurations.focus * 60);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(() => modeDurations.focus * 60);
   const [isRunning, setIsRunning] = useState<boolean>(false);
 
   // Anti-throttling timestamp refs
@@ -82,7 +97,7 @@ export function useFocusTimer() {
   const intervalRef = useRef<number | null>(null);
   const savedFocusSecondsRef = useRef<number | null>(null);
 
-  const totalSeconds = mode === 'focus' ? customFocusDuration : MODE_DURATIONS[mode];
+  const totalSeconds = mode === 'focus' ? customFocusDuration : modeDurations[mode] * 60;
 
   // Request notification permission once
   const requestNotificationPermission = useCallback(async () => {
@@ -92,6 +107,27 @@ export function useFocusTimer() {
       } catch {}
     }
   }, []);
+
+  // Update minutes for a specific mode
+  const updateModeDuration = useCallback((targetMode: FocusMode, minutes: number) => {
+    const validMinutes = Math.max(1, Math.min(180, Math.round(minutes) || 1));
+    setModeDurations((prev) => {
+      const next = { ...prev, [targetMode]: validMinutes };
+      try {
+        localStorage.setItem('viet_travel_mode_durations', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+
+    if (targetMode === 'focus') {
+      setCustomFocusDuration(validMinutes * 60);
+      savedFocusSecondsRef.current = null;
+    }
+
+    if (!isRunning && mode === targetMode) {
+      setRemainingSeconds(validMinutes * 60);
+    }
+  }, [isRunning, mode]);
 
   // Set custom duration (e.g. for dynamic distance-based sessions)
   const setCustomDuration = useCallback((seconds: number) => {
@@ -118,12 +154,12 @@ export function useFocusTimer() {
 
     if (newMode === 'focus') {
       // Return to focus session: restore saved remaining time, or default to full custom focus duration
-      const resumeSecs = savedFocusSecondsRef.current !== null ? savedFocusSecondsRef.current : customFocusDuration;
+      const resumeSecs = savedFocusSecondsRef.current !== null ? savedFocusSecondsRef.current : (modeDurations.focus * 60);
       setRemainingSeconds(resumeSecs);
     } else {
-      setRemainingSeconds(MODE_DURATIONS[newMode]);
+      setRemainingSeconds(modeDurations[newMode] * 60);
     }
-  }, [mode, remainingSeconds, customFocusDuration]);
+  }, [mode, remainingSeconds, modeDurations]);
 
   // Timer Tick Handler using absolute timestamps
   const handleTimerComplete = useCallback(() => {
@@ -244,6 +280,8 @@ export function useFocusTimer() {
   return {
     mode,
     setMode,
+    modeDurations,
+    updateModeDuration,
     isRunning,
     remainingSeconds,
     totalSeconds,

@@ -142,13 +142,6 @@ export async function fetchVideoMetadata(
   videoId: string,
   getPlayerVideoData?: () => { title?: string; author?: string; videoId?: string } | null
 ): Promise<SongMetadata> {
-  const defaultMeta: SongMetadata = {
-    videoId,
-    title: '',
-    author: '',
-    thumbnailUrl: getThumbnailUrl(videoId, 'hq'),
-  };
-
   const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
   // 1. Primary: Noembed
@@ -204,5 +197,10 @@ export async function fetchVideoMetadata(
     }
   }
 
-  return defaultMeta;
+  return {
+    videoId,
+    title: 'Track ' + videoId,
+    author: 'YouTube Audio',
+    thumbnailUrl: getThumbnailUrl(videoId, 'hq'),
+  };
 }

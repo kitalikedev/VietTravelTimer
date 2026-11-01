@@ -378,24 +378,11 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
   const isRouteReady = !!originId && !!destinationId;
 
   return (
-    <div className="relative flex-1 w-full h-full overflow-hidden bg-[#000000] text-white select-none">
-      {/* Base Satellite Imagery Layer (Guaranteed immediate visual - Zero black void) */}
-      <div
-        className="absolute inset-0 w-full h-full z-0 bg-[#000000] pointer-events-none overflow-hidden flex items-center justify-center"
-        aria-hidden="true"
-      >
-        <img
-          src="/vietnam-satellite.png"
-          alt="Vietnam Satellite Canvas"
-          className="w-full h-full object-cover opacity-60 filter contrast-125 brightness-90 saturate-110"
-        />
-        <div className="absolute inset-0 bg-[#000000]/40" />
-      </div>
-
+    <div className="relative flex-1 w-full h-full overflow-hidden bg-[#09090b] text-white select-none">
       {/* 1. Photorealistic Esri Satellite Leaflet Canvas (Full Bleed) */}
       <div
         ref={mapContainerRef}
-        className="absolute inset-0 w-full h-full z-[1] bg-transparent"
+        className="absolute inset-0 w-full h-full z-[1] bg-[#09090b]"
         style={{
           filter: 'contrast(1.08) brightness(0.92) saturate(1.1)',
         }}

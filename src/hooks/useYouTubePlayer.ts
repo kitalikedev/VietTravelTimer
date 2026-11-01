@@ -10,6 +10,7 @@ declare global {
         config: {
           height: string | number;
           width: string | number;
+          host?: string;
           videoId: string;
           playerVars?: Record<string, any>;
           events?: Record<string, (event: any) => void>;
@@ -55,6 +56,8 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
   const onErrorRef = useRef(onError);
   const onTrackChangeRef = useRef(onTrackChange);
   const currentVideoIdRef = useRef<string>(videoId);
+  const lastReportedTitleRef = useRef<string>('');
+  const lastReportedVideoIdRef = useRef<string>('');
 
   useEffect(() => {
     onEndedRef.current = onEnded;
@@ -68,19 +71,29 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
     onTrackChangeRef.current = onTrackChange;
   }, [onTrackChange]);
 
-  // Helper to sync videoData when track changes (especially inside playlists)
+  // Helper to sync videoData when track changes (especially inside playlists or when title arrives)
   const syncCurrentVideoData = useCallback((player: any) => {
     if (!player || typeof player.getVideoData !== 'function') return;
     try {
       const data = player.getVideoData();
-      if (data && data.video_id && data.video_id !== currentVideoIdRef.current) {
-        currentVideoIdRef.current = data.video_id;
-        if (onTrackChangeRef.current) {
-          onTrackChangeRef.current({
-            videoId: data.video_id,
-            title: data.title || '',
-            author: data.author || '',
-          });
+      if (data && (data.video_id || data.title)) {
+        const vidId = data.video_id || currentVideoIdRef.current;
+        const hasIdChanged = vidId !== lastReportedVideoIdRef.current;
+        const hasTitleArrived = Boolean(data.title && data.title !== lastReportedTitleRef.current);
+
+        if (hasIdChanged || hasTitleArrived) {
+          currentVideoIdRef.current = vidId;
+          lastReportedVideoIdRef.current = vidId;
+          if (data.title) {
+            lastReportedTitleRef.current = data.title;
+          }
+          if (onTrackChangeRef.current) {
+            onTrackChangeRef.current({
+              videoId: vidId,
+              title: data.title || '',
+              author: data.author || '',
+            });
+          }
         }
       }
       if (typeof player.getPlaylistIndex === 'function') {
@@ -155,6 +168,7 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
       playerRef.current = new window.YT.Player(containerId.current, {
         height: '48',
         width: '48',
+        host: 'https://www.youtube-nocookie.com',
         videoId: currentVideoIdRef.current,
         playerVars: {
           autoplay: 0,
@@ -165,6 +179,7 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
           rel: 0,
           modestbranding: 1,
           origin: window.location.origin,
+          enablejsapi: 1,
         },
         events: {
           onReady: (event: any) => {
@@ -174,6 +189,7 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
               event.target.setVolume(volume);
               const dur = event.target.getDuration();
               if (dur) setDuration(dur);
+              syncCurrentVideoData(event.target);
               if (hasUserStartedRef.current) {
                 event.target.playVideo();
                 setIsPlaying(true);
@@ -185,12 +201,12 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
           onStateChange: (event: any) => {
             if (isCancelled) return;
             const state = event.data;
+            syncCurrentVideoData(event.target);
             if (state === 1) { // PLAYING
               setIsPlaying(true);
               setIsBuffering(false);
               const dur = event.target.getDuration();
               if (dur && dur > 0) setDuration(dur);
-              syncCurrentVideoData(event.target);
             } else if (state === 2) { // PAUSED
               setIsPlaying(false);
               setIsBuffering(false);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Volume2, VolumeX, CloudRain, Flame, Waves, Activity, Trees, RotateCcw } from 'lucide-react';
+import { X, Volume2, VolumeX, CloudRain, Flame, Waves, Activity, Trees, RotateCcw, Train, Coffee } from 'lucide-react';
 import { AmbientSoundId, AMBIENT_SOUNDS } from '../hooks/useAmbientSounds';
 
 interface AmbientSoundMixerProps {
@@ -12,13 +12,17 @@ interface AmbientSoundMixerProps {
   onStopAll: () => void;
 }
 
-const ICONS: Record<AmbientSoundId, React.ComponentType<{ className?: string }>> = {
+export const AMBIENT_ICONS: Record<AmbientSoundId, React.ComponentType<{ className?: string }>> = {
+  train: Train,
   rain: CloudRain,
+  cafe: Coffee,
+  brownNoise: Activity,
   campfire: Flame,
   ocean: Waves,
-  brownNoise: Activity,
   forest: Trees,
 };
+
+const ICONS = AMBIENT_ICONS;
 
 export const AmbientSoundMixer: React.FC<AmbientSoundMixerProps> = ({
   isOpen,

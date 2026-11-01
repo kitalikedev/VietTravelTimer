@@ -160,7 +160,7 @@ export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
       }`}
     >
       {/* Top Flight-Style Navigation HUD */}
-      <header className="relative z-30 w-full px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md">
+      <header className="relative z-30 w-full px-4 sm:px-6 py-3.5 sm:py-4 pt-[max(env(safe-area-inset-top),1rem)] border-b border-white/[0.08] flex items-center justify-between bg-[#000000]/95 backdrop-blur-md">
         {/* Left: Brand Label */}
         <div className="flex items-center gap-3">
           <div className="text-xs font-sans tracking-wide text-zinc-300 font-medium">
