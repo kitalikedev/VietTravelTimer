@@ -8,7 +8,6 @@ import {
   VolumeX,
   Volume1,
   Headphones,
-  CheckSquare,
   X,
 } from 'lucide-react';
 import { getRouteMilestones, RouteMilestone } from '../data/railwayMilestones';
@@ -79,9 +78,6 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
   onToggleMute,
   onToggleAmbient,
   hasActiveAmbient = false,
-  taskCount = 0,
-  completedTaskCount = 0,
-  onToggleTasks,
   hasJourneyStarted,
   departureStation,
   arrivalStation,
@@ -436,10 +432,10 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
         <div className="relative pointer-events-auto bg-[#18181b]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-3 flex flex-col gap-2 max-w-md mx-auto">
           {renderUrlPopover(true)}
 
-          {/* TIER 1: TRANSPORT CONTROLS & COMPACT VOLUME DIRECTLY TOGETHER */}
-          <div className="flex items-center justify-between gap-3 pt-0.5">
-            {/* Prev / Play-Pause / Next + Volume Slider */}
-            <div className="flex items-center gap-2">
+          {/* TIER 1: TRANSPORT CONTROLS & VISIBLE TOUCH-FRIENDLY VOLUME */}
+          <div className="flex items-center justify-between gap-2 pt-0.5">
+            {/* Prev / Play-Pause / Next */}
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
                 onClick={onPrevTrack}
@@ -468,50 +464,36 @@ export const BottomPlayerBar: React.FC<BottomPlayerBarProps> = ({
               >
                 <SkipForward className="w-5 h-5 fill-current" />
               </button>
-
-              {/* Volume right next to transport buttons */}
-              <div className="flex items-center gap-1.5 ml-1 pl-1.5 border-l border-white/10">
-                <button
-                  type="button"
-                  onClick={onToggleMute}
-                  className="text-white/50 hover:text-white shrink-0 cursor-pointer p-0.5 transition"
-                  title={isMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
-                >
-                  {isMuted || volume === 0 ? (
-                    <VolumeX className="w-4 h-4 text-rose-400" />
-                  ) : volume < 50 ? (
-                    <Volume1 className="w-4 h-4" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={isMuted ? 0 : volume}
-                  onChange={(e) => onVolumeChange(Number(e.target.value))}
-                  className="w-14 sm:w-16 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-white"
-                />
-              </div>
             </div>
 
-            {/* Right side of Tier 1: Task check icon */}
-            {onToggleTasks && (
+            {/* Explicit, touch-friendly volume slider container */}
+            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-white/5 rounded-xl border border-white/10 shrink-0">
               <button
                 type="button"
-                onClick={onToggleTasks}
-                className="relative p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition cursor-pointer active:scale-95 shrink-0"
-                title="Danh sách mục tiêu (Tasks)"
+                onClick={onToggleMute}
+                className="text-white/70 hover:text-white shrink-0 cursor-pointer p-0.5 transition"
+                title={isMuted ? 'Bật âm thanh' : 'Tắt tiếng'}
               >
-                <CheckSquare className="w-4 h-4 text-zinc-300" />
-                {taskCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[13px] h-[13px] rounded-full text-[8px] font-mono bg-white text-black font-bold flex items-center justify-center px-0.5 shadow">
-                    {taskCount - completedTaskCount > 0 ? taskCount - completedTaskCount : '✓'}
-                  </span>
+                {isMuted || volume === 0 ? (
+                  <VolumeX className="w-4 h-4 text-rose-400" />
+                ) : volume < 50 ? (
+                  <Volume1 className="w-4 h-4 text-white/80" />
+                ) : (
+                  <Volume2 className="w-4 h-4 text-white/80" />
                 )}
               </button>
-            )}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={isMuted ? 0 : volume}
+                onChange={(e) => onVolumeChange(Number(e.target.value))}
+                className="w-20 xs:w-24 sm:w-28 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-white touch-none"
+              />
+              <span className="text-[10px] font-mono text-white/60 w-7 text-right select-none">
+                {isMuted ? 0 : volume}%
+              </span>
+            </div>
           </div>
 
           {/* TIER 2: MUSIC PROGRESS SCRUBBER */}

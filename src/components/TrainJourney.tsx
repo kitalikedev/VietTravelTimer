@@ -125,8 +125,14 @@ export const TrainJourney: React.FC<TrainJourneyProps> = ({
   backgroundMode = 'pov_train',
   onToggleBackgroundMode,
 }) => {
-  const depStation = VIETNAM_STATIONS.find((s) => s.id === departureId) || VIETNAM_STATIONS[0];
-  const arrStation = VIETNAM_STATIONS.find((s) => s.id === arrivalId) || VIETNAM_STATIONS[4]; // Default: Đà Nẵng
+  const depStation =
+    VIETNAM_STATIONS.find((s) => s.id === departureId) ||
+    VIETNAM_STATIONS.find((s) => s.id === 'hn') ||
+    VIETNAM_STATIONS[0];
+  const arrStation =
+    VIETNAM_STATIONS.find((s) => s.id === arrivalId) ||
+    VIETNAM_STATIONS.find((s) => s.id === 'dn') ||
+    VIETNAM_STATIONS[VIETNAM_STATIONS.length - 1];
 
   // Train Progress directly linked to active timer session
   const progress =

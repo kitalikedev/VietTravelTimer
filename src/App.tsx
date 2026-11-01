@@ -24,6 +24,7 @@ import { getAllCustomBgsFromDB } from './utils/customBgStorage';
 import { parseYouTubeUrl } from './utils/youtube';
 import { AlertCircle, Layers, Cloud, Eye, Sliders } from 'lucide-react';
 import { FlocusActionBar } from './components/FlocusActionBar';
+import { MobileActionDrawer } from './components/MobileActionDrawer';
 import { YTPlayerError } from './types/player';
 import { CloudSyncPopover } from './components/CloudSyncPopover';
 import { ClockSettingsPopover } from './components/ClockSettingsPopover';
@@ -242,64 +243,90 @@ export const App: React.FC = () => {
     handleSelectBackdropMode(backdropMode === 'POV_VIDEO' ? 'CENTER_ARTWORK' : 'POV_VIDEO');
   }, [backdropMode, handleSelectBackdropMode]);
 
-  const handleStartTrainJourney = (
-    intent: string,
-    berthInfo: { coach: string; compartment: string; berth: string },
-    durationMinutes: number = 60
-  ) => {
-    // 1. Unblock Web Audio Context
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        if (ctx.state === 'suspended') ctx.resume();
-      }
-    } catch {}
+  const handleSelectTrainRoute = useCallback((depId: string, arrId: string) => {
+    const next = { departureId: depId, arrivalId: arrId };
+    setTrainJourney(next);
+    saveTrainJourney(next);
+  }, []);
 
-    // 2. Mark journey initiated and switch to POV Train Video
-    setHasJourneyStarted(true);
-    setActiveBerthInfo(berthInfo);
-    handleSelectBackdropMode('POV_VIDEO');
-    try {
-      localStorage.setItem('ytlyrics_active_berth_info', JSON.stringify(berthInfo));
-    } catch {}
-
-    // 3. Auto-initialize Procedural Ambient Sounds, setting Brown Noise to 30%
-    try {
-      ambientSounds.setChannelVolume('brownNoise', 30);
-    } catch {}
-
-    // 4. Configure custom duration and start focus timer immediately
-    focusTimer.setMode('focus');
-    focusTimer.setCustomDuration(durationMinutes * 60);
-    focusTimer.startTimer(durationMinutes * 60);
-
-    // 5. Sync focus intent to TaskManager as the active session task
-    const depStation =
-      VIETNAM_STATIONS.find((s) => s.id === trainJourney.departureId) || VIETNAM_STATIONS[0];
-    const arrStation =
-      VIETNAM_STATIONS.find((s) => s.id === trainJourney.arrivalId) || VIETNAM_STATIONS[4];
-    const taskTitle = `${intent} (${depStation.name} ➔ ${arrStation.name} • ${berthInfo.coach} ${berthInfo.berth})`;
-
-    const existingTask = tasks.find((t) => t.text === taskTitle);
-    if (existingTask) {
-      selectActiveTask(existingTask.id);
-    } else {
-      const newTask = {
-        id: `task-${Date.now()}`,
-        text: taskTitle,
-        completed: false,
-        createdAt: Date.now(),
-      };
-      setTasks((prev) => [newTask, ...prev]);
-      selectActiveTask(newTask.id);
-    }
-
-    // 6. Switch to focus view
+  const handleCloseTrainBooking = useCallback(() => {
     setAppView('focus');
-  };
+  }, []);
+
+  const handleStartTrainJourney = useCallback(
+    (
+      intent: string,
+      berthInfo: { coach: string; compartment: string; berth: string },
+      durationMinutes: number = 60
+    ) => {
+      // 1. Unblock Web Audio Context
+      try {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          if (ctx.state === 'suspended') ctx.resume();
+        }
+      } catch {}
+
+      // 2. Mark journey initiated and switch to POV Train Video
+      setHasJourneyStarted(true);
+      setActiveBerthInfo(berthInfo);
+      handleSelectBackdropMode('POV_VIDEO');
+      try {
+        localStorage.setItem('ytlyrics_active_berth_info', JSON.stringify(berthInfo));
+      } catch {}
+
+      // 3. Auto-initialize Procedural Ambient Sounds, setting Brown Noise to 30%
+      try {
+        ambientSounds.setChannelVolume('brownNoise', 30);
+      } catch {}
+
+      // 4. Configure custom duration and start focus timer immediately
+      focusTimer.setMode('focus');
+      focusTimer.setCustomDuration(durationMinutes * 60);
+      focusTimer.startTimer(durationMinutes * 60);
+
+      // 5. Sync focus intent to TaskManager as the active session task
+      const depStation =
+        VIETNAM_STATIONS.find((s) => s.id === trainJourney.departureId) ||
+        VIETNAM_STATIONS.find((s) => s.id === 'hn') ||
+        VIETNAM_STATIONS[0];
+      const arrStation =
+        VIETNAM_STATIONS.find((s) => s.id === trainJourney.arrivalId) ||
+        VIETNAM_STATIONS.find((s) => s.id === 'dn') ||
+        VIETNAM_STATIONS[10];
+      const taskTitle = `${intent} (${depStation.name} ➔ ${arrStation.name} • ${berthInfo.coach} ${berthInfo.berth})`;
+
+      const existingTask = tasks.find((t) => t.text === taskTitle);
+      if (existingTask) {
+        selectActiveTask(existingTask.id);
+      } else {
+        const newTask = {
+          id: `task-${Date.now()}`,
+          text: taskTitle,
+          completed: false,
+          createdAt: Date.now(),
+        };
+        setTasks((prev) => [newTask, ...prev]);
+        selectActiveTask(newTask.id);
+      }
+
+      // 6. Switch to focus view
+      setAppView('focus');
+    },
+    [
+      ambientSounds,
+      focusTimer,
+      handleSelectBackdropMode,
+      selectActiveTask,
+      setTasks,
+      tasks,
+      trainJourney.arrivalId,
+      trainJourney.departureId,
+    ]
+  );
 
   const handleAbortTrainJourney = () => {
     // 1. Mark journey inactive so train video stops
@@ -668,11 +695,17 @@ export const App: React.FC = () => {
 
   // Train Stations Lookup for HUD
   const depStationObj = useMemo(
-    () => VIETNAM_STATIONS.find((s) => s.id === trainJourney.departureId) || VIETNAM_STATIONS[0],
+    () =>
+      VIETNAM_STATIONS.find((s) => s.id === trainJourney.departureId) ||
+      VIETNAM_STATIONS.find((s) => s.id === 'hn') ||
+      VIETNAM_STATIONS[0],
     [trainJourney.departureId]
   );
   const arrStationObj = useMemo(
-    () => VIETNAM_STATIONS.find((s) => s.id === trainJourney.arrivalId) || VIETNAM_STATIONS[4],
+    () =>
+      VIETNAM_STATIONS.find((s) => s.id === trainJourney.arrivalId) ||
+      VIETNAM_STATIONS.find((s) => s.id === 'dn') ||
+      VIETNAM_STATIONS[10],
     [trainJourney.arrivalId]
   );
 
@@ -800,26 +833,28 @@ export const App: React.FC = () => {
               VietTravelTimer
             </span>
 
-            {/* Quick Feature Toolbar: Nhiệm vụ, Ghi chú, Âm thanh */}
-            <FlocusActionBar
-              tasks={tasks}
-              onAddTask={handleAddTask}
-              onToggleTask={handleToggleTask}
-              onDeleteTask={handleDeleteTask}
-              queue={queue}
-              currentIndex={currentQueueIndex}
-              onSelectTrack={handleSelectTrackFromQueue}
-              onRemoveTrack={removeFromQueue}
-              onAddTrackToQueue={handleAddTrackToQueue}
-              repeatMode={repeatMode}
-              onToggleRepeat={toggleRepeat}
-              isPlaying={player.isPlaying}
-              volumes={ambientSounds.volumes}
-              isMasterMuted={ambientSounds.isMasterMuted}
-              onVolumeChange={ambientSounds.setChannelVolume}
-              onToggleMasterMute={ambientSounds.toggleMasterMute}
-              onStopAllAmbient={ambientSounds.stopAll}
-            />
+            {/* Quick Feature Toolbar: Nhiệm vụ, Ghi chú, Âm thanh (Desktop) */}
+            <div className="hidden md:flex items-center">
+              <FlocusActionBar
+                tasks={tasks}
+                onAddTask={handleAddTask}
+                onToggleTask={handleToggleTask}
+                onDeleteTask={handleDeleteTask}
+                queue={queue}
+                currentIndex={currentQueueIndex}
+                onSelectTrack={handleSelectTrackFromQueue}
+                onRemoveTrack={removeFromQueue}
+                onAddTrackToQueue={handleAddTrackToQueue}
+                repeatMode={repeatMode}
+                onToggleRepeat={toggleRepeat}
+                isPlaying={player.isPlaying}
+                volumes={ambientSounds.volumes}
+                isMasterMuted={ambientSounds.isMasterMuted}
+                onVolumeChange={ambientSounds.setChannelVolume}
+                onToggleMasterMute={ambientSounds.toggleMasterMute}
+                onStopAllAmbient={ambientSounds.stopAll}
+              />
+            </div>
           </div>
 
           {/* DEAD CENTER: When Clock is Hidden (Zen Mode), place unhide & settings button in the dead center */}
@@ -1102,6 +1137,27 @@ export const App: React.FC = () => {
         </div>
       )}
 
+      {/* Mobile Action Bar & Bottom Drawer (Tasks, Notes, Sounds on mobile) */}
+      <MobileActionDrawer
+        tasks={tasks}
+        onAddTask={handleAddTask}
+        onToggleTask={handleToggleTask}
+        onDeleteTask={handleDeleteTask}
+        queue={queue}
+        currentIndex={currentQueueIndex}
+        onSelectTrack={handleSelectTrackFromQueue}
+        onRemoveTrack={removeFromQueue}
+        onAddTrackToQueue={handleAddTrackToQueue}
+        repeatMode={repeatMode}
+        onToggleRepeat={toggleRepeat}
+        isPlaying={player.isPlaying}
+        volumes={ambientSounds.volumes}
+        isMasterMuted={ambientSounds.isMasterMuted}
+        onVolumeChange={ambientSounds.setChannelVolume}
+        onToggleMasterMute={ambientSounds.toggleMasterMute}
+        onStopAllAmbient={ambientSounds.stopAll}
+      />
+
       {/* Integrated Apple-Minimalist Bottom Music Controller with Animated Railway Progress Track */}
       <div
         className={`transition-opacity duration-300 ${
@@ -1216,14 +1272,10 @@ export const App: React.FC = () => {
       >
         <TrainBookingFlow
           isOpen={appView === 'train_booking'}
-          onClose={() => setAppView('focus')}
+          onClose={handleCloseTrainBooking}
           departureId={trainJourney.departureId}
           arrivalId={trainJourney.arrivalId}
-          onSelectRoute={(depId, arrId) => {
-            const next = { departureId: depId, arrivalId: arrId };
-            setTrainJourney(next);
-            saveTrainJourney(next);
-          }}
+          onSelectRoute={handleSelectTrainRoute}
           onStartJourney={handleStartTrainJourney}
         />
       </div>

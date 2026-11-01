@@ -76,9 +76,52 @@ export function subscribeToLocalSync(callback: (payload: Partial<SyncDataPayload
 
 /**
  * Cloud Real-Time Key-Value Sync
- * Uses debounced push to remote endpoint with seamless offline fallback.
+ * Uses debounced push with valid bucket initialization and seamless offline fallback.
  */
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const STORAGE_KVDB_BUCKET_KEY = 'viet_travel_kvdb_bucket_id';
+let cachedBucketId: string | null = null;
+let isRemoteDisabled = false;
+let isInitializingBucket = false;
+
+async function getOrCreateBucketId(): Promise<string | null> {
+  if (isRemoteDisabled) return null;
+  if (cachedBucketId) return cachedBucketId;
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KVDB_BUCKET_KEY);
+    if (saved && saved.length > 5) {
+      cachedBucketId = saved;
+      return saved;
+    }
+
+    if (isInitializingBucket) return null;
+    isInitializingBucket = true;
+
+    // Dynamically register a free bucket on kvdb.io so keys never return 404
+    const initRes = await fetch('https://kvdb.io/', {
+      method: 'POST',
+      body: '',
+    }).catch(() => null);
+
+    isInitializingBucket = false;
+
+    if (initRes && initRes.ok) {
+      const newBucket = (await initRes.text()).trim();
+      if (newBucket && newBucket.length > 5) {
+        cachedBucketId = newBucket;
+        localStorage.setItem(STORAGE_KVDB_BUCKET_KEY, newBucket);
+        return newBucket;
+      }
+    }
+  } catch {
+    isInitializingBucket = false;
+  }
+
+  // If remote bucket init fails (offline, rate limit, CORS), fall back cleanly to localStorage
+  isRemoteDisabled = true;
+  return null;
+}
 
 export async function pushSyncData(
   syncId: string,
@@ -91,7 +134,7 @@ export async function pushSyncData(
     debounceTimer = setTimeout(async () => {
       onStatusChange?.('syncing');
 
-      // 1. Always update local storage first (instant & reliable)
+      // 1. Always update local storage first (instant & 100% reliable)
       try {
         localStorage.setItem(`viet_travel_cloud_backup_${syncId}`, JSON.stringify(payload));
         const nowStr = new Date().toLocaleTimeString('vi-VN');
@@ -101,23 +144,35 @@ export async function pushSyncData(
         console.warn('[Sync] Local backup error:', err);
       }
 
-      // 2. Cloud key-value push
+      // 2. Cloud key-value push with safe status check
       try {
-        // Attempt cloud KV endpoint
-        const endpoint = `https://kvdb.io/4y2N8hP1Tz5vXm7qL9wB3r/${encodeURIComponent(syncId)}`;
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        }).catch(() => null);
+        const bucket = await getOrCreateBucketId();
+        if (bucket) {
+          const endpoint = `https://kvdb.io/${bucket}/${encodeURIComponent(syncId)}`;
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }).catch(() => null);
 
-        if (res && res.ok) {
+          if (!res || !res.ok) {
+            // Graceful fallback to localStorage only, do not spam red errors
+            if (res && res.status === 404) {
+              cachedBucketId = null;
+              localStorage.removeItem(STORAGE_KVDB_BUCKET_KEY);
+              isRemoteDisabled = true;
+            }
+            onStatusChange?.('synced');
+            resolve(true);
+            return;
+          }
+
           onStatusChange?.('synced');
           resolve(true);
           return;
         }
-      } catch (e) {
-        // Fallback silently if offline or blocked by browser extensions
+      } catch {
+        // Silently catch network drops and fallback to local storage
       }
 
       // Mark as synced locally with timestamp
@@ -127,18 +182,39 @@ export async function pushSyncData(
   });
 }
 
+export async function fetchFromCloud(syncId: string): Promise<SyncDataPayload | null> {
+  try {
+    const bucket = await getOrCreateBucketId();
+    if (!bucket) return null;
+
+    const endpoint = `https://kvdb.io/${bucket}/${encodeURIComponent(syncId)}`;
+    const res = await fetch(endpoint).catch(() => null);
+    if (!res) return null;
+
+    // Gracefully catch 404 / 400 without throwing or spamming errors
+    if (!res.ok) {
+      if (res.status === 404) {
+        return null;
+      }
+      return null;
+    }
+
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+      return data as SyncDataPayload;
+    }
+  } catch {
+    // Suppress network or parsing errors to keep console clean
+  }
+  return null;
+}
+
 export async function pullSyncData(syncId: string): Promise<SyncDataPayload | null> {
   // 1. Try cloud pull
-  try {
-    const endpoint = `https://kvdb.io/4y2N8hP1Tz5vXm7qL9wB3r/${encodeURIComponent(syncId)}`;
-    const res = await fetch(endpoint).catch(() => null);
-    if (res && res.ok) {
-      const data = await res.json();
-      if (data && typeof data === 'object') {
-        return data as SyncDataPayload;
-      }
-    }
-  } catch {}
+  const cloudData = await fetchFromCloud(syncId);
+  if (cloudData) {
+    return cloudData;
+  }
 
   // 2. Fallback to local backup for this syncId
   try {

@@ -14,6 +14,7 @@ export interface StationMapCoord {
 }
 
 export const STATION_MAP_COORDS: Record<string, StationMapCoord> = {
+  ls: { x: 125, y: 25 },
   hn: { x: 105, y: 55 },
   nb: { x: 115, y: 100 },
   vinh: { x: 102, y: 155 },
@@ -23,6 +24,7 @@ export const STATION_MAP_COORDS: Record<string, StationMapCoord> = {
   nt: { x: 175, y: 385 },
   pt: { x: 150, y: 435 },
   sg: { x: 120, y: 470 },
+  cm: { x: 100, y: 520 },
 };
 
 export interface StationPercentCoord {
@@ -33,6 +35,7 @@ export interface StationPercentCoord {
 }
 
 export const STATION_COORDINATES: Record<string, StationPercentCoord> = {
+  ls: { top: '10.5%', left: '50.0%', topNum: 10.5, leftNum: 50.0 },
   hn: { top: '15.5%', left: '46.0%', topNum: 15.5, leftNum: 46.0 },
   phl: { top: '18.2%', left: '47.2%', topNum: 18.2, leftNum: 47.2 },
   ndi: { top: '20.0%', left: '48.5%', topNum: 20.0, leftNum: 48.5 },
@@ -51,6 +54,7 @@ export const STATION_COORDINATES: Record<string, StationPercentCoord> = {
   pt: { top: '75.8%', left: '61.5%', topNum: 75.8, leftNum: 61.5 },
   bho: { top: '79.2%', left: '57.0%', topNum: 79.2, leftNum: 57.0 },
   sg: { top: '81.0%', left: '55.8%', topNum: 81.0, leftNum: 55.8 },
+  cm: { top: '88.5%', left: '48.0%', topNum: 88.5, leftNum: 48.0 },
 };
 
 export const UNIVERSAL_FOCUS_INTENTS = [
@@ -87,6 +91,7 @@ export const CARRIAGE_BERTHS: CarriageBerth[] = Array.from({ length: 28 }, (_, i
 });
 
 export const VIETNAM_STATIONS: Station[] = [
+  { id: 'ls', name: 'Lạng Sơn (Đồng Đăng)', code: 'LSO', region: 'Bắc', km: -163, lat: 21.8485, lng: 106.7583 },
   { id: 'hn', name: 'Hà Nội', code: 'HAN', region: 'Bắc', km: 0, lat: 21.0245, lng: 105.8412 },
   { id: 'phl', name: 'Phủ Lý', code: 'PHL', region: 'Bắc', km: 56, lat: 20.5408, lng: 105.9189 },
   { id: 'ndi', name: 'Nam Định', code: 'NDI', region: 'Bắc', km: 87, lat: 20.4339, lng: 106.1789 },
@@ -105,11 +110,12 @@ export const VIETNAM_STATIONS: Station[] = [
   { id: 'pt', name: 'Phan Thiết', code: 'PTH', region: 'Nam', km: 1551, lat: 10.9333, lng: 108.1000 },
   { id: 'bho', name: 'Biên Hòa', code: 'BHO', region: 'Nam', km: 1697, lat: 10.9572, lng: 106.8208 },
   { id: 'sg', name: 'Sài Gòn', code: 'SGO', region: 'Nam', km: 1726, lat: 10.7828, lng: 106.6781 },
+  { id: 'cm', name: 'Cà Mau (Đất Mũi)', code: 'CMA', region: 'Nam', km: 2050, lat: 9.1769, lng: 105.1524 },
 ];
 
 export function calculateEstimatedDuration(distanceKm: number): { minutes: number; formatted: string } {
   const clamped = Math.max(30, distanceKm);
-  const minutes = Math.min(180, Math.max(25, Math.round((clamped / 1726) * 155 + 25)));
+  const minutes = Math.min(240, Math.max(25, Math.round((clamped / 2213) * 195 + 25)));
   const hrs = Math.floor(minutes / 60);
   const mins = minutes % 60;
   const formatted = hrs > 0 ? (mins > 0 ? `${hrs}h${String(mins).padStart(2, '0')}m` : `${hrs}h00m`) : `${mins}m`;
@@ -224,6 +230,6 @@ export function calculateJourneyInfo(departureId: string, arrivalId: string, pro
     nextStation,
     intermediateStations,
     isSouthbound,
-    trainCode: isSouthbound ? 'SE1 Thống Nhất' : 'SE2 Thống Nhất',
+    trainCode: isSouthbound ? 'SE1' : 'SE2',
   };
 }

@@ -38,3 +38,8 @@ pnpm-debug.log*
 .LSOverride
 Icon
 ._*
+# AI Handoff & Temporary Docs
+*handoff*
+*HANDOFF*
+*.tmp
+*.log

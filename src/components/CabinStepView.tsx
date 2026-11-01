@@ -111,7 +111,7 @@ export const CabinStepView: React.FC<CabinStepViewProps> = ({
             {/* Chassis Header */}
             <div className="flex items-center justify-between text-xs font-sans text-zinc-400 pb-3 border-b border-white/15 mb-5 font-medium">
               <span>Đầu toa (Vestibule A)</span>
-              <span className="text-zinc-200">Đường sắt Thống Nhất · Toa {coachNumber}</span>
+              <span className="text-zinc-200">Đường sắt Việt Nam · Toa {coachNumber}</span>
               <span>Cuối toa (Vestibule B)</span>
             </div>
 

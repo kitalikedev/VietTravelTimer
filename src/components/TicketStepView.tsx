@@ -60,7 +60,7 @@ export const TicketStepView: React.FC<TicketStepViewProps> = ({
             {/* Top Airline-Style Header Strip */}
             <div className="bg-[#0F172A] px-7 py-3 flex items-center justify-between">
               <span className="text-[11px] font-sans tracking-wide text-[#38BDF8] font-semibold">
-                ĐƯỜNG SẮT VIỆT NAM · TÀU THỐNG NHẤT SE3
+                ĐƯỜNG SẮT VIỆT NAM
               </span>
               <span className="text-[10px] font-mono text-slate-400">LOTUS CLASS</span>
             </div>
@@ -184,7 +184,7 @@ export const TicketStepView: React.FC<TicketStepViewProps> = ({
                   })}
                 </svg>
                 <div className="text-[8px] font-mono text-slate-500 text-center tracking-widest mt-1">
-                  SE3-{selectedBerth.id}-VNR
+                  VNR-{selectedBerth.id}
                 </div>
               </div>
             </div>

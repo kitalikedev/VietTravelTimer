@@ -36,7 +36,7 @@ const stepMotionVariants = {
 };
 const stepMotionTransition = { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const };
 
-export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
+const TrainBookingFlowComponent: React.FC<TrainBookingFlowProps> = ({
   isOpen,
   onClose,
   departureId,
@@ -118,6 +118,19 @@ export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
     [selectedDepId, handleSwapStations, onSelectRoute]
   );
 
+  const handleSelectRouteFromRouteStep = useCallback(
+    (depId: string, arrId: string) => {
+      setSelectedDepId(depId);
+      setSelectedArrId(arrId);
+      onSelectRoute(depId, arrId);
+    },
+    [onSelectRoute]
+  );
+
+  const handleConfirmRoute = useCallback(() => {
+    setStep('CABIN');
+  }, []);
+
   const handleStartDepart = useCallback(() => {
     // 1. Unblock Web AudioContext on direct user gesture
     try {
@@ -164,7 +177,7 @@ export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
         {/* Left: Brand Label */}
         <div className="flex items-center gap-3">
           <div className="text-xs font-sans tracking-wide text-zinc-300 font-medium">
-            Đường sắt Việt Nam · Thống Nhất SE3
+            Đường sắt Việt Nam
           </div>
         </div>
 
@@ -215,13 +228,9 @@ export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
                 durationMinutes={durationMinutes}
                 onSelectDuration={setDurationMinutes}
                 onSelectStation={handleSelectStation}
-                onSelectRoute={(depId, arrId) => {
-                  setSelectedDepId(depId);
-                  setSelectedArrId(arrId);
-                  onSelectRoute(depId, arrId);
-                }}
+                onSelectRoute={handleSelectRouteFromRouteStep}
                 onSwapStations={handleSwapStations}
-                onConfirm={() => setStep('CABIN')}
+                onConfirm={handleConfirmRoute}
               />
             </motion.div>
           )}
@@ -296,4 +305,5 @@ export const TrainBookingFlow: React.FC<TrainBookingFlowProps> = ({
   );
 };
 
+export const TrainBookingFlow = React.memo(TrainBookingFlowComponent);
 export default TrainBookingFlow;

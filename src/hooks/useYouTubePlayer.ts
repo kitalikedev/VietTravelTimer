@@ -168,7 +168,7 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
       playerRef.current = new window.YT.Player(containerId.current, {
         height: '48',
         width: '48',
-        host: 'https://www.youtube-nocookie.com',
+        host: 'https://www.youtube.com',
         videoId: currentVideoIdRef.current,
         playerVars: {
           autoplay: 0,
@@ -180,6 +180,7 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
           modestbranding: 1,
           origin: window.location.origin,
           enablejsapi: 1,
+          widget_referrer: window.location.origin,
         },
         events: {
           onReady: (event: any) => {
@@ -269,8 +270,21 @@ export function useYouTubePlayer({ videoId, onEnded, onError, onTrackChange }: U
       initPlayer();
     }
 
+    // Suppress benign YouTube iframe API internal postMessage origin warnings
+    const handleWindowError = (e: ErrorEvent) => {
+      if (
+        e.message &&
+        (e.message.includes('postMessage') ||
+          e.message.includes("Failed to execute 'postMessage'"))
+      ) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('error', handleWindowError);
+
     return () => {
       isCancelled = true;
+      window.removeEventListener('error', handleWindowError);
     };
   }, []); // Run ONCE on mount
 

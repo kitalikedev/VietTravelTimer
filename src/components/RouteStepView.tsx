@@ -1,11 +1,37 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Minus } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Minus, Maximize2 } from 'lucide-react';
 import {
   VIETNAM_STATIONS,
   calculateJourneyInfo,
   calculateEstimatedDuration,
   DURATION_OPTIONS,
 } from '../data/trainStations';
+
+// Sovereignty Markers: Permanent Vietnam Flag & Sovereignty Labels
+export interface SovereigntyMarker {
+  id: string;
+  name: string;
+  sub: string;
+  lat: number;
+  lng: number;
+}
+
+const SOVEREIGNTY_MARKERS: SovereigntyMarker[] = [
+  {
+    id: 'hoang-sa',
+    name: 'Quần đảo Hoàng Sa',
+    sub: 'TP. Đà Nẵng · Việt Nam',
+    lat: 16.5369,
+    lng: 112.0242,
+  },
+  {
+    id: 'truong-sa',
+    name: 'Quần đảo Trường Sa',
+    sub: 'Tỉnh Khánh Hòa · Việt Nam',
+    lat: 8.6433,
+    lng: 111.9197,
+  },
+];
 
 interface RouteStepViewProps {
   isOpen?: boolean;
@@ -19,7 +45,7 @@ interface RouteStepViewProps {
   onConfirm: () => void;
 }
 
-export const RouteStepView: React.FC<RouteStepViewProps> = ({
+const RouteStepViewComponent: React.FC<RouteStepViewProps> = ({
   isOpen = true,
   departureId,
   arrivalId,
@@ -40,21 +66,33 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
     if (arrivalId) setDestinationId(arrivalId);
   }, [departureId, arrivalId]);
 
-  const depStation = originId ? VIETNAM_STATIONS.find((s) => s.id === originId) || null : null;
-  const arrStation = destinationId ? VIETNAM_STATIONS.find((s) => s.id === destinationId) || null : null;
+  const depStation = useMemo(
+    () => (originId ? VIETNAM_STATIONS.find((s) => s.id === originId) || null : null),
+    [originId]
+  );
+  const arrStation = useMemo(
+    () => (destinationId ? VIETNAM_STATIONS.find((s) => s.id === destinationId) || null : null),
+    [destinationId]
+  );
 
-  const journeyInfo =
-    depStation && arrStation
-      ? calculateJourneyInfo(depStation.id, arrStation.id, 0)
-      : null;
+  // Memoize journeyInfo so it NEVER recreates on background timer ticks
+  const journeyInfo = useMemo(() => {
+    if (!depStation || !arrStation) return null;
+    return calculateJourneyInfo(depStation.id, arrStation.id, 0);
+  }, [depStation, arrStation]);
 
   const totalDistance = journeyInfo ? journeyInfo.totalDistance : 0;
-  const estimatedDuration = calculateEstimatedDuration(totalDistance);
+  const estimatedDuration = useMemo(
+    () => calculateEstimatedDuration(totalDistance),
+    [totalDistance]
+  );
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
-  const markersLayerRef = useRef<any>(null);
+  const sovereigntyLayerRef = useRef<any>(null);
   const routeLineLayerRef = useRef<any>(null);
+  const markersLayerRef = useRef<any>(null);
+  const prevCoordsRef = useRef<[number, number] | null>(null);
 
   // Carousel Drag-To-Scroll & Auto-Scroll State
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -77,36 +115,42 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
   }, [destinationId, originId]);
 
   // Two-way toggle click logic
-  const handleStationToggle = (stationId: string) => {
-    let nextOrigin = originId;
-    let nextDest = destinationId;
+  const handleStationToggle = useCallback(
+    (stationId: string) => {
+      let nextOrigin = originId;
+      let nextDest = destinationId;
 
-    if (stationId === originId) {
-      nextOrigin = null;
-      setOriginId(null);
-    } else if (stationId === destinationId) {
-      nextDest = null;
-      setDestinationId(null);
-    } else {
-      if (originId === null) {
-        nextOrigin = stationId;
-        setOriginId(stationId);
-      } else if (destinationId === null) {
-        nextDest = stationId;
-        setDestinationId(stationId);
+      if (stationId === originId) {
+        nextOrigin = null;
+        setOriginId(null);
+      } else if (stationId === destinationId) {
+        nextDest = null;
+        setDestinationId(null);
       } else {
-        nextDest = stationId;
-        setDestinationId(stationId);
+        if (originId === null) {
+          nextOrigin = stationId;
+          setOriginId(stationId);
+        } else if (destinationId === null) {
+          nextDest = stationId;
+          setDestinationId(stationId);
+        } else {
+          nextDest = stationId;
+          setDestinationId(stationId);
+        }
       }
-    }
 
-    if (nextOrigin && nextDest) {
-      onSelectRoute?.(nextOrigin, nextDest);
-      onSelectStation(nextDest);
-    }
-  };
+      if (nextOrigin && nextDest) {
+        onSelectRoute?.(nextOrigin, nextDest);
+        onSelectStation(nextDest);
+      }
+    },
+    [originId, destinationId, onSelectRoute, onSelectStation]
+  );
 
-  const handleSwap = () => {
+  const handleStationToggleRef = useRef(handleStationToggle);
+  handleStationToggleRef.current = handleStationToggle;
+
+  const handleSwap = useCallback(() => {
     const prevOrigin = originId;
     const prevDest = destinationId;
     setOriginId(prevDest);
@@ -115,120 +159,77 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
       onSelectRoute?.(prevDest, prevOrigin);
       onSwapStations();
     }
-  };
+  }, [originId, destinationId, onSelectRoute, onSwapStations]);
 
-  // Leaflet Map Initialization
+  // Determine currently selected target coords for smooth gliding
+  const selectedStation = useMemo(() => {
+    if (destinationId) return VIETNAM_STATIONS.find((s) => s.id === destinationId) || null;
+    if (originId) return VIETNAM_STATIONS.find((s) => s.id === originId) || null;
+    return null;
+  }, [destinationId, originId]);
+
+  const targetCoords: [number, number] | null = useMemo(() => {
+    return selectedStation ? [selectedStation.lat, selectedStation.lng] : null;
+  }, [selectedStation]);
+
+  // Smooth camera glide to newly selected station (ZERO remount, ZERO tile tear-down)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (!targetCoords || !mapInstanceRef.current) return;
+    if (
+      prevCoordsRef.current &&
+      prevCoordsRef.current[0] === targetCoords[0] &&
+      prevCoordsRef.current[1] === targetCoords[1]
+    ) {
+      return;
+    }
+    prevCoordsRef.current = targetCoords;
 
-    let isSubscribed = true;
-    let resizeObserver: ResizeObserver | null = null;
+    const currentZoom = mapInstanceRef.current.getZoom();
+    mapInstanceRef.current.flyTo(targetCoords, Math.max(currentZoom, 7), {
+      animate: true,
+      duration: 0.8,
+      easeLinearity: 0.25,
+    });
+  }, [targetCoords]);
 
-    const setupMap = () => {
-      const L = (window as any).L;
-      if (!L || !mapContainerRef.current || mapInstanceRef.current) return;
+  // Helper to render sovereignty markers once
+  const renderSovereigntyMarkers = useCallback((sovereigntyGroup: any, L: any) => {
+    if (!L || !sovereigntyGroup) return;
+    sovereigntyGroup.clearLayers();
 
-      const southWest = L.latLng(7.0, 101.0);
-      const northEast = L.latLng(24.5, 114.5);
-      const bounds = L.latLngBounds(southWest, northEast);
+    SOVEREIGNTY_MARKERS.forEach((m) => {
+      const iconHtml = `
+        <div class="relative flex items-center justify-center select-none pointer-events-none">
+          <!-- Glowing pulse center pin -->
+          <div class="relative flex items-center justify-center">
+            <div class="absolute w-5 h-5 rounded-full bg-amber-400/25 animate-ping"></div>
+            <div class="w-3.5 h-3.5 rounded-full border-2 border-amber-300 bg-red-600 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.8)]">
+              <div class="w-1 h-1 rounded-full bg-amber-200"></div>
+            </div>
+          </div>
 
-      const map = L.map(mapContainerRef.current, {
-        center: [16.0544, 107.5],
-        zoom: 6,
-        minZoom: 5,
-        maxZoom: 12,
-        maxBounds: bounds,
-        maxBoundsViscosity: 0.85,
-        zoomControl: false,
-        attributionControl: false,
+          <!-- Tag Pill -->
+          <div class="absolute left-1/2 -top-8 -translate-x-1/2 pointer-events-none z-30">
+            <div class="bg-[#0b0c10]/95 backdrop-blur-md text-white border border-amber-400/40 px-2.5 py-1 text-[11px] font-sans font-semibold inline-flex items-center gap-1.5 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.8)] whitespace-nowrap">
+              <span class="text-xs">🇻🇳</span>
+              <span class="tracking-wide text-amber-300 font-bold">${m.name}</span>
+              <span class="text-[9.5px] text-zinc-400 font-normal">(${m.sub})</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const icon = L.divIcon({
+        html: iconHtml,
+        className: 'leaflet-sovereignty-marker',
+        iconSize: [0, 0],
       });
 
-      L.tileLayer(
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        {
-          maxZoom: 18,
-        }
-      ).addTo(map);
-
-      L.control
-        .attribution({ position: 'bottomright', prefix: 'Esri World Imagery' })
-        .addTo(map);
-
-      const routeGroup = L.featureGroup().addTo(map);
-      const markersGroup = L.featureGroup().addTo(map);
-
-      routeLineLayerRef.current = routeGroup;
-      markersLayerRef.current = markersGroup;
-      mapInstanceRef.current = map;
-
-      setTimeout(() => {
-        try { map.invalidateSize(); } catch {}
-      }, 100);
-      setTimeout(() => {
-        try { map.invalidateSize(); } catch {}
-      }, 400);
-
-      try {
-        resizeObserver = new ResizeObserver(() => {
-          try { map.invalidateSize(); } catch {}
-        });
-        if (mapContainerRef.current) {
-          resizeObserver.observe(mapContainerRef.current);
-        }
-      } catch {}
-
-      renderMapContent();
-    };
-
-    if ((window as any).L) {
-      setupMap();
-    } else {
-      if (!document.getElementById('leaflet-cdn-script')) {
-        const script = document.createElement('script');
-        script.id = 'leaflet-cdn-script';
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-        script.onload = () => {
-          if (isSubscribed) setupMap();
-        };
-        document.head.appendChild(script);
-      }
-
-      const timer = setInterval(() => {
-        if ((window as any).L) {
-          clearInterval(timer);
-          if (isSubscribed) setupMap();
-        }
-      }, 50);
-      return () => {
-        clearInterval(timer);
-        isSubscribed = false;
-        if (resizeObserver) resizeObserver.disconnect();
-      };
-    }
-
-    return () => {
-      isSubscribed = false;
-      if (resizeObserver) resizeObserver.disconnect();
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
+      L.marker([m.lat, m.lng], { icon, interactive: false }).addTo(sovereigntyGroup);
+    });
   }, []);
 
-  // Invalidate Leaflet size immediately when container becomes visible
-  useEffect(() => {
-    if (isOpen && mapInstanceRef.current) {
-      const timer = setTimeout(() => {
-        try {
-          mapInstanceRef.current?.invalidateSize();
-        } catch {}
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  // Update Markers and Route Polylines (Apple Maps Style Vector Contrast)
+  // Update Station Markers and Active Route Polylines (Apple Maps Style Vector Contrast)
   const renderMapContent = useCallback(() => {
     const L = (window as any).L;
     const map = mapInstanceRef.current;
@@ -237,12 +238,14 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
     routeLineLayerRef.current.clearLayers();
     markersLayerRef.current.clearLayers();
 
-    // 1. Complete North-South railway track: hairline dashed line
+    // 1. Complete North-South railway track from Lạng Sơn to Cà Mau: hairline dashed line
     const allCoords = VIETNAM_STATIONS.map((s) => [s.lat, s.lng]);
     L.polyline(allCoords, {
       color: 'rgba(255, 255, 255, 0.25)',
       weight: 1.5,
       dashArray: '3, 6',
+      lineCap: 'round',
+      lineJoin: 'round',
     }).addTo(routeLineLayerRef.current);
 
     // 2. Active route polyline: Crisp solid white line (stroke-width: 2.5, opacity: 0.95)
@@ -323,33 +326,176 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
       });
 
       const marker = L.marker([station.lat, station.lng], { icon });
-      marker.on('click', () => handleStationToggle(station.id));
+      marker.on('click', () => handleStationToggleRef.current(station.id));
       marker.addTo(markersLayerRef.current);
     });
   }, [originId, destinationId, journeyInfo]);
 
+  // Leaflet Map Initialization: Runs EXACTLY ONCE on Mount (Empty Dependency Array)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let isSubscribed = true;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const setupMap = () => {
+      const L = (window as any).L;
+      if (!L || !mapContainerRef.current || mapInstanceRef.current) return;
+
+      const southWest = L.latLng(6.0, 99.0);
+      const northEast = L.latLng(25.5, 118.0);
+      const bounds = L.latLngBounds(southWest, northEast);
+
+      const map = L.map(mapContainerRef.current, {
+        center: [16.0544, 107.5],
+        zoom: 6,
+        minZoom: 5,
+        maxZoom: 18,
+        preferCanvas: true,
+        scrollWheelZoom: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        dragging: true,
+        maxBounds: bounds,
+        maxBoundsViscosity: 0.65,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        {
+          minZoom: 5,
+          maxZoom: 18,
+          maxNativeZoom: 17,
+          updateWhenZooming: false,
+          updateWhenIdle: true,
+        }
+      ).addTo(map);
+
+      L.control
+        .attribution({ position: 'bottomright', prefix: 'Esri World Imagery' })
+        .addTo(map);
+
+      // Dedicated layers
+      const sovereigntyGroup = L.featureGroup().addTo(map);
+      const routeGroup = L.featureGroup().addTo(map);
+      const markersGroup = L.featureGroup().addTo(map);
+
+      sovereigntyLayerRef.current = sovereigntyGroup;
+      routeLineLayerRef.current = routeGroup;
+      markersLayerRef.current = markersGroup;
+      mapInstanceRef.current = map;
+
+      // Draw sovereignty markers once
+      renderSovereigntyMarkers(sovereigntyGroup, L);
+
+      // Fix black void tile glitch: invalidate size with RAF and staggered timeouts
+      requestAnimationFrame(() => {
+        try { map.invalidateSize(); } catch {}
+      });
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch {}
+      }, 150);
+      setTimeout(() => {
+        try { map.invalidateSize(); } catch {}
+      }, 450);
+
+      try {
+        resizeObserver = new ResizeObserver(() => {
+          try { map.invalidateSize(); } catch {}
+        });
+        if (mapContainerRef.current) {
+          resizeObserver.observe(mapContainerRef.current);
+        }
+      } catch {}
+
+      // Initial route rendering
+      renderMapContent();
+    };
+
+    if ((window as any).L) {
+      setupMap();
+    } else {
+      if (!document.getElementById('leaflet-cdn-script')) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-cdn-script';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+        script.onload = () => {
+          if (isSubscribed) setupMap();
+        };
+        document.head.appendChild(script);
+      }
+
+      const timer = setInterval(() => {
+        if ((window as any).L) {
+          clearInterval(timer);
+          if (isSubscribed) setupMap();
+        }
+      }, 50);
+      return () => {
+        clearInterval(timer);
+        isSubscribed = false;
+        if (resizeObserver) resizeObserver.disconnect();
+      };
+    }
+
+    return () => {
+      isSubscribed = false;
+      if (resizeObserver) resizeObserver.disconnect();
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []); // Run exactly once on mount!
+
+  // Invalidate Leaflet size immediately when container becomes visible
+  useEffect(() => {
+    if (isOpen && mapInstanceRef.current) {
+      requestAnimationFrame(() => {
+        try { mapInstanceRef.current?.invalidateSize(); } catch {}
+      });
+      const timer = setTimeout(() => {
+        try {
+          mapInstanceRef.current?.invalidateSize();
+        } catch {}
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Fit Route: auto recalculate bounds and zoom to frame the journey
+  const handleFitRoute = useCallback(() => {
+    const L = (window as any).L;
+    const map = mapInstanceRef.current;
+    if (!L || !map) return;
+
+    if (journeyInfo && journeyInfo.intermediateStations.length >= 2) {
+      const activeCoords = journeyInfo.intermediateStations.map((s) => [s.lat, s.lng]);
+      const bounds = L.latLngBounds(activeCoords);
+      map.fitBounds(bounds, {
+        paddingTopLeft: [50, 50],
+        paddingBottomRight: [50, 240],
+        maxZoom: 13,
+        animate: true,
+      });
+    } else {
+      const allCoords = VIETNAM_STATIONS.map((s) => [s.lat, s.lng]);
+      const bounds = L.latLngBounds(allCoords);
+      map.fitBounds(bounds, {
+        paddingTopLeft: [50, 50],
+        paddingBottomRight: [50, 240],
+        maxZoom: 10,
+        animate: true,
+      });
+    }
+  }, [journeyInfo]);
+
+  // Re-render route line & station markers when stations change (without remounting map/tiles)
   useEffect(() => {
     renderMapContent();
   }, [renderMapContent]);
-
-  // Smooth route framing in viewport above the floating dock
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    const L = (window as any).L;
-    if (!map || !L || !journeyInfo) return;
-
-    if (journeyInfo.intermediateStations.length >= 2) {
-      const coords = journeyInfo.intermediateStations.map((s) => [s.lat, s.lng]);
-      try {
-        map.fitBounds(L.latLngBounds(coords), {
-          paddingTopLeft: [70, 50],
-          paddingBottomRight: [50, 260],
-          maxZoom: 7,
-          animate: true,
-        });
-      } catch {}
-    }
-  }, [journeyInfo]);
 
   // Carousel mouse-drag handlers
   const handleCarouselMouseDown = (e: React.MouseEvent) => {
@@ -388,24 +534,38 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
         }}
       />
 
-      {/* 2. Apple Design Floating Zoom Pill (Top Right) */}
-      <div className="absolute right-5 top-5 z-20 flex flex-col rounded-full bg-[#101014]/80 backdrop-blur-xl border border-white/10 p-1 shadow-2xl">
+      {/* 2. Floating Map Zoom & Fit Route Controls */}
+      <div className="absolute right-4 sm:right-5 top-4 sm:top-5 z-20 flex flex-col gap-2 items-end">
+        {/* Zoom In & Out (+ / -) */}
+        <div className="flex flex-col rounded-2xl bg-[#101014]/90 backdrop-blur-xl border border-white/15 p-1 shadow-2xl">
+          <button
+            type="button"
+            onClick={() => mapInstanceRef.current?.zoomIn()}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition cursor-pointer"
+            title="Phóng to bản đồ (+)"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          <div className="w-4 h-px bg-white/10 mx-auto my-0.5" />
+          <button
+            type="button"
+            onClick={() => mapInstanceRef.current?.zoomOut()}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 active:scale-95 transition cursor-pointer"
+            title="Thu nhỏ bản đồ (-)"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Fit Route Button ("Khung cảnh toàn tuyến") */}
         <button
           type="button"
-          onClick={() => mapInstanceRef.current?.zoomIn()}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 transition"
-          title="Phóng to bản đồ"
+          onClick={handleFitRoute}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#101014]/90 backdrop-blur-xl border border-white/15 text-xs text-zinc-200 hover:text-white hover:bg-white/10 active:scale-95 transition shadow-2xl cursor-pointer"
+          title="Khung cảnh toàn tuyến hành trình"
         >
-          <Plus className="w-4 h-4" />
-        </button>
-        <div className="w-4 h-px bg-white/10 mx-auto my-0.5" />
-        <button
-          type="button"
-          onClick={() => mapInstanceRef.current?.zoomOut()}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-300 hover:text-white hover:bg-white/10 transition"
-          title="Thu nhỏ bản đồ"
-        >
-          <Minus className="w-4 h-4" />
+          <Maximize2 className="w-3.5 h-3.5 text-zinc-300" />
+          <span className="font-medium text-[11px]">Toàn tuyến</span>
         </button>
       </div>
 
@@ -450,7 +610,7 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
               <button
                 type="button"
                 onClick={handleSwap}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-zinc-300 hover:text-white transition"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] text-zinc-300 hover:text-white transition cursor-pointer"
                 title="Đổi chiều ga đi & ga đến"
               >
                 <span>⇄</span>
@@ -459,14 +619,20 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
             </div>
           </div>
 
-          {/* Station Cards Carousel */}
+          {/* Station Cards Horizontal Carousel with Mouse Wheel & Drag Scrolling */}
           <div
             ref={carouselRef}
+            onWheel={(e) => {
+              if (e.deltaY !== 0) {
+                e.currentTarget.scrollLeft += e.deltaY;
+              }
+            }}
             onMouseDown={handleCarouselMouseDown}
             onMouseMove={handleCarouselMouseMove}
             onMouseUp={handleCarouselMouseUp}
             onMouseLeave={handleCarouselMouseUp}
-            className="w-full overflow-x-auto scroll-smooth snap-x snap-mandatory no-scrollbar flex gap-2.5 py-1 cursor-grab active:cursor-grabbing select-none"
+            className="flex items-center gap-2 overflow-x-auto scroll-smooth py-2 px-1 no-scrollbar sm:scrollbar-thin sm:scrollbar-thumb-white/20 sm:scrollbar-track-transparent select-none cursor-grab active:cursor-grabbing"
+            style={{ scrollbarWidth: 'thin' }}
           >
             {VIETNAM_STATIONS.map((station) => {
               const isOrigin = station.id === originId;
@@ -484,7 +650,7 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
                     if (hasDraggedRef.current) return;
                     handleStationToggle(station.id);
                   }}
-                  className={`w-28 h-20 rounded-2xl border p-2.5 flex flex-col justify-between shrink-0 snap-center transition-all text-left ${
+                  className={`w-28 h-20 rounded-2xl border p-2.5 flex flex-col justify-between shrink-0 snap-center transition-all text-left cursor-pointer ${
                     isDestination
                       ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_20px_rgba(251,191,36,0.3)] font-semibold scale-[1.02]'
                       : isOrigin
@@ -549,7 +715,7 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
                       key={opt.minutes}
                       type="button"
                       onClick={() => onSelectDuration(opt.minutes)}
-                      className={`px-3 py-1 rounded-full text-xs font-sans transition-all ${
+                      className={`px-3 py-1 rounded-full text-xs font-sans transition-all cursor-pointer ${
                         isActive
                           ? 'bg-white text-black font-semibold shadow-md'
                           : 'text-zinc-400 hover:text-white'
@@ -589,4 +755,5 @@ export const RouteStepView: React.FC<RouteStepViewProps> = ({
   );
 };
 
+export const RouteStepView = React.memo(RouteStepViewComponent);
 export default RouteStepView;

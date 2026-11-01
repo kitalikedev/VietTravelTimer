@@ -11,6 +11,7 @@ export interface RouteMilestone extends RailwayMilestone {
 }
 
 export const RAILWAY_MILESTONES: RailwayMilestone[] = [
+  { id: 'ls', name: 'Lạng Sơn - Ga Quốc tế Đồng Đăng', km: -163, note: 'Cửa ngõ biên cương phía Bắc & Ải Chi Lăng lịch sử' },
   { id: 'hn', name: 'Hà Nội', km: 0, note: 'Khởi hành từ ga Hà Nội cổ kính' },
   { id: 'phl', name: 'Hà Nam - Phủ Lý', km: 56, note: 'Qua vùng đồng bằng Bắc Bộ' },
   { id: 'ndi', name: 'Nam Định', km: 87, note: 'Vùng đất dệt & tháp Phổ Minh' },
@@ -31,6 +32,7 @@ export const RAILWAY_MILESTONES: RailwayMilestone[] = [
   { id: 'pt', name: 'Bình Thuận', km: 1551, note: 'Qua những đồi thanh long bạt ngàn' },
   { id: 'bho', name: 'Đồng Nai - Biên Hòa', km: 1697, note: 'Cửa ngõ miền Đông Nam Bộ' },
   { id: 'sg', name: 'TP. Hồ Chí Minh - Sài Gòn', km: 1726, note: 'Ga cuối Sài Gòn hoa lệ' },
+  { id: 'cm', name: 'Đất Mũi Cà Mau', km: 2050, note: 'Điểm cực Nam tổ quốc - Rừng đước ngập mặn Năm Căn' },
 ];
 
 /**
